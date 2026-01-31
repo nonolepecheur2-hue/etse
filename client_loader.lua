@@ -17,9 +17,16 @@ local categories = {
     main = {
         title = "Main",
         items = {
-            {label = "Player", action = "category", target = "player"}
+            {label = "Player", action = "category", target = "player"},
+            {label = "Serveur", action = "category", target = "server"},
+            {label = "Combat", action = "category", target = "combat"},
+            {label = "Vehicule", action = "category", target = "vehicle"},
+            {label = "Visual", action = "category", target = "visual"},
+            {label = "Parametres", action = "category", target = "settings"},
         }
     },
+
+    -- PLAYER
     player = {
         title = "Player",
         items = {
@@ -50,8 +57,114 @@ local categories = {
             {label = "Throw From Vehicle", action = "throwvehicle"},
             {label = "Super Strength", action = "superstrength"}
         }
-    }
+    },
+
+    -- SERVEUR
+    server = {
+        title = "Serveur",
+        items = {
+            {label = "Infos", action = "category", target = "server_info"},
+            {label = "Utilitaires", action = "category", target = "server_utils"},
+        }
+    },
+    server_info = {
+        title = "Serveur - Infos",
+        items = {
+            {label = "Placeholder", action = "close"} -- remplace par tes actions
+        }
+    },
+    server_utils = {
+        title = "Serveur - Utilitaires",
+        items = {
+            {label = "Placeholder", action = "close"} -- remplace par tes actions
+        }
+    },
+
+    -- COMBAT
+    combat = {
+        title = "Combat",
+        items = {
+            {label = "Armes", action = "category", target = "combat_weapons"},
+            {label = "Autres", action = "category", target = "combat_other"},
+        }
+    },
+    combat_weapons = {
+        title = "Combat - Armes",
+        items = {
+            {label = "Placeholder", action = "close"}
+        }
+    },
+    combat_other = {
+        title = "Combat - Autres",
+        items = {
+            {label = "Placeholder", action = "close"}
+        }
+    },
+
+    -- VEHICULE
+    vehicle = {
+        title = "Vehicule",
+        items = {
+            {label = "Gestion", action = "category", target = "vehicle_manage"},
+            {label = "Options", action = "category", target = "vehicle_options"},
+        }
+    },
+    vehicle_manage = {
+        title = "Vehicule - Gestion",
+        items = {
+            {label = "Placeholder", action = "close"}
+        }
+    },
+    vehicle_options = {
+        title = "Vehicule - Options",
+        items = {
+            {label = "Placeholder", action = "close"}
+        }
+    },
+
+    -- VISUAL
+    visual = {
+        title = "Visual",
+        items = {
+            {label = "HUD", action = "category", target = "visual_hud"},
+            {label = "Effets", action = "category", target = "visual_fx"},
+        }
+    },
+    visual_hud = {
+        title = "Visual - HUD",
+        items = {
+            {label = "Placeholder", action = "close"}
+        }
+    },
+    visual_fx = {
+        title = "Visual - Effets",
+        items = {
+            {label = "Placeholder", action = "close"}
+        }
+    },
+
+    -- PARAMETRES
+    settings = {
+        title = "Parametres",
+        items = {
+            {label = "Theme", action = "category", target = "settings_theme"},
+            {label = "Menu", action = "category", target = "settings_menu"},
+        }
+    },
+    settings_theme = {
+        title = "Parametres - Theme",
+        items = {
+            {label = "Placeholder", action = "close"}
+        }
+    },
+    settings_menu = {
+        title = "Parametres - Menu",
+        items = {
+            {label = "Placeholder", action = "close"}
+        }
+    },
 }
+
 
 
 
@@ -70,11 +183,12 @@ local superstrengthEnabled = false
 
 local Banner = {
     enabled = true,
-    imagePath = "",
+    imagePath = "", -- mets un chemin ici si tu veux une vraie image
     text = "DNB",
-    subtitle = "Lua Menu ",
-    height = 100
+    subtitle = "Lua Menu",
+    height = 105
 }
+
 
 local bannerTexture = nil
 local bannerWidth = 0
@@ -89,40 +203,45 @@ local Style = {
     width = 350,
     height = 42,
     itemSpacing = 0,
-    
-    bgColor = {0.12, 0.12, 0.12, 0.75},
-    headerColor = {0.0, 0.0, 0.0, 1.0},
-    selectedColor = {0.55, 0.0, 0.0, 0.95},
-    itemColor = {0.18, 0.18, 0.18, 0.7},
-    itemHoverColor = {0.22, 0.22, 0.22, 0.75},
-    accentColor = {0.65, 0.0, 0.0, 1.0},
+
+    bgColor = {0.10, 0.10, 0.10, 0.78},
+    headerColor = {0.02, 0.02, 0.02, 1.0},
+
+    -- Rouge plus “riche”
+    selectedColor = {0.72, 0.06, 0.06, 0.92},
+    accentColor   = {0.90, 0.10, 0.10, 1.00},
+
+    itemColor = {0.16, 0.16, 0.16, 0.72},
+    itemHoverColor = {0.20, 0.20, 0.20, 0.76},
     textColor = {1.0, 1.0, 1.0, 1.0},
-    textSecondary = {0.7, 0.7, 0.7, 1.0},
-    separatorColor = {0.3, 0.3, 0.3, 0.6},
-    footerColor = {0.0, 0.0, 0.0, 1.0},
-    scrollbarBg = {0.15, 0.15, 0.15, 0.8},
-    scrollbarThumb = {0.65, 0.0, 0.0, 0.95},
-    
+    textSecondary = {0.75, 0.75, 0.75, 1.0},
+    separatorColor = {0.35, 0.35, 0.35, 0.55},
+    footerColor = {0.02, 0.02, 0.02, 1.0},
+
+    scrollbarBg = {0.14, 0.14, 0.14, 0.85},
+    scrollbarThumb = {0.90, 0.10, 0.10, 0.95},
+
     titleSize = 18,
     subtitleSize = 15,
     itemSize = 16,
     infoSize = 13,
     footerSize = 13,
-    bannerTitleSize = 28,
-    bannerSubtitleSize = 16,
-    
+    bannerTitleSize = 30,
+    bannerSubtitleSize = 15,
+
     headerHeight = 45,
     footerHeight = 32,
-    
+
     headerRounding = 0.0,
     itemRounding = 0.0,
-    footerRounding = 8.0,
-    bannerRounding = 0.0,
-    globalRounding = 8.0,
-    
+    footerRounding = 10.0,
+    bannerRounding = 10.0,
+    globalRounding = 10.0,
+
     scrollbarWidth = 6,
     scrollbarPadding = 8
 }
+
 
 
 
@@ -642,7 +761,57 @@ Citizen.CreateThread(function()
             bannerHeight = h
             print("^2✓ Banner loaded: " .. Banner.imagePath .. "^0")
         else
-            print("^1✗ Unable to load banner^0")
+    -- Fond principal
+    Susano.DrawRectFilled(x, currentY, width, Banner.height,
+        0.06, 0.06, 0.07, 0.98, Style.bannerRounding)
+
+    -- Bande rouge haut (effet “header strip”)
+    Susano.DrawRectFilled(x, currentY, width, 22,
+        Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 0.85, Style.bannerRounding)
+
+    -- Bande sombre milieu pour donner de la profondeur
+    Susano.DrawRectFilled(x, currentY + 22, width, 18,
+        0.0, 0.0, 0.0, 0.25, 0.0)
+
+    -- “Logo” à gauche : petit carré rouge + lettres
+    local logoSize = 36
+    local logoX = x + 14
+    local logoY = currentY + (Banner.height - logoSize) / 2
+
+    Susano.DrawRectFilled(logoX, logoY, logoSize, logoSize,
+        Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 0.95, 10.0)
+
+    -- Contre-jour léger (petit overlay)
+    Susano.DrawRectFilled(logoX, logoY, logoSize, logoSize / 2,
+        1.0, 1.0, 1.0, 0.08, 10.0)
+
+    -- Texte dans le logo (DNB)
+    local logoText = "DNB"
+    local lw = Susano.GetTextWidth(logoText, 16)
+    Susano.DrawText(logoX + (logoSize - lw)/2, logoY + 10,
+        logoText, 16,
+        1.0, 1.0, 1.0, 1.0)
+
+    -- Titre principal + sous-titre à droite du logo
+    local titleX = logoX + logoSize + 12
+    local titleY = currentY + 30
+
+    Susano.DrawText(titleX, titleY,
+        Banner.text, Style.bannerTitleSize,
+        1.0, 1.0, 1.0, 1.0)
+
+    Susano.DrawText(titleX, titleY + 30,
+        Banner.subtitle, Style.bannerSubtitleSize,
+        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
+
+    -- Petite “signature” à droite
+    local tag = "RED UI"
+    local tagW = Susano.GetTextWidth(tag, 12)
+    Susano.DrawText(x + width - tagW - 14, currentY + Banner.height - 22,
+        tag, 12,
+        Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 0.95)
+end
+
         end
     end
 end)
