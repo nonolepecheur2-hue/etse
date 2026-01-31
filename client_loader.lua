@@ -1,16 +1,9 @@
 -- ================================
--- DNB MENU (Susano) - Clean UI (Phaze-like) + Neon + Smooth nav
--- Flow: Select Keyboard/Mouse -> Press key -> Saved
--- Controls:
---   ↑ ↓ : navigate (smooth + key repeat)
---   →   : enter submenu
---   Delete (Suppr): back submenu
---   Enter : select (also enters submenu)
---   Esc : close menu
---   ToggleKey : open/close menu
+-- DNB MENU (Susano) - Rework complet (centré + drag + nav fluide)
+-- Flow: Keyboard/Mouse -> Press key -> Saved
 -- ================================
 
--- Virtual-Key codes (Windows)
+-- ===== VK codes =====
 local VK = {
   UP       = 0x26,
   DOWN     = 0x28,
@@ -18,9 +11,7 @@ local VK = {
   RIGHT    = 0x27,
   ENTER    = 0x0D,
   ESC      = 0x1B,
-  DELETE   = 0x2E,  -- SUPPR (Back submenu)
-  BACK     = 0x08,  -- Backspace (optionnel)
-  TAB      = 0x09,
+  DELETE   = 0x2E,  -- SUPPR = Back submenu
 
   -- Mouse buttons
   LBUTTON  = 0x01,
@@ -29,7 +20,7 @@ local VK = {
   XBUTTON1 = 0x05,
   XBUTTON2 = 0x06,
 
-  -- Common keys
+  -- Common bind keys
   INSERT   = 0x2D,
   CAPS     = 0x14,
   LSHIFT   = 0xA0,
@@ -38,11 +29,10 @@ local VK = {
   RCTRL    = 0xA3,
   LALT     = 0xA4,
   RALT     = 0xA5,
+  TAB      = 0x09,
 }
 
--- ================================
--- Susano input helpers (GetAsyncKeyState)
--- ================================
+-- ===== Susano Input (GetAsyncKeyState) =====
 local function keyDown(vk)
   local down, pressed = Susano.GetAsyncKeyState(vk)
   return down == true
@@ -53,26 +43,21 @@ local function keyPressed(vk)
   return pressed == true
 end
 
--- Repeat (smooth navigation when holding ↑/↓)
-local function repeatKey(vk, state, now)
-  -- state: { next = 0, firstDelay = 240, repeatRate = 55 }
+-- Smooth key-repeat for ↑/↓ (hold)
+local function repeatKey(vk, st, nowMs)
   if keyPressed(vk) then
-    state.next = now + state.firstDelay
+    st.next = nowMs + st.firstDelay
     return true
   end
-  if keyDown(vk) and now >= state.next then
-    state.next = now + state.repeatRate
+  if keyDown(vk) and nowMs >= st.next then
+    st.next = nowMs + st.repeatRate
     return true
   end
-  if not keyDown(vk) then
-    state.next = 0
-  end
+  if not keyDown(vk) then st.next = 0 end
   return false
 end
 
--- ================================
--- Pretty key names
--- ================================
+-- ===== Key name =====
 local function keyName(vk)
   if not vk then return "None" end
   local names = {
@@ -89,22 +74,18 @@ local function keyName(vk)
     [VK.RCTRL]   = "RCtrl",
     [VK.LALT]    = "LAlt",
     [VK.RALT]    = "RAlt",
-    [VK.ESC]     = "Esc",
     [VK.TAB]     = "Tab",
+    [VK.ESC]     = "Esc",
     [VK.DELETE]  = "Delete",
   }
   if names[vk] then return names[vk] end
-
-  if vk >= 0x41 and vk <= 0x5A then return string.char(vk) end -- A-Z
-  if vk >= 0x30 and vk <= 0x39 then return string.char(vk) end -- 0-9
+  if vk >= 0x41 and vk <= 0x5A then return string.char(vk) end   -- A-Z
+  if vk >= 0x30 and vk <= 0x39 then return string.char(vk) end   -- 0-9
   if vk >= 0x70 and vk <= 0x7B then return "F" .. tostring(vk - 0x6F) end -- F1-F12
-
   return ("VK 0x%02X"):format(vk)
 end
 
--- ================================
--- Key capture (device-specific)
--- ================================
+-- ===== Bind detection =====
 local function detectMouseBind()
   local mouse = { VK.LBUTTON, VK.RBUTTON, VK.MBUTTON, VK.XBUTTON1, VK.XBUTTON2 }
   for i=1,#mouse do
@@ -114,32 +95,22 @@ local function detectMouseBind()
 end
 
 local function detectKeyboardBind()
-  -- Scan a wide set incl. Caps/Insert/Shift/Ctrl/Alt + A-Z + 0-9 + F1-F12
   local specials = {
-    VK.INSERT, VK.CAPS, VK.TAB, VK.ESC, VK.DELETE,
+    VK.INSERT, VK.CAPS, VK.TAB, VK.DELETE,
     VK.LSHIFT, VK.RSHIFT, VK.LCTRL, VK.RCTRL, VK.LALT, VK.RALT,
   }
   for i=1,#specials do
     if keyPressed(specials[i]) then return specials[i] end
   end
-
   for vk=0x41,0x5A do if keyPressed(vk) then return vk end end
   for vk=0x30,0x39 do if keyPressed(vk) then return vk end end
   for vk=0x70,0x7B do if keyPressed(vk) then return vk end end
-
-  -- If you REALLY want “any key”: uncomment (heavier)
-  -- for vk=0x01,0xFE do
-  --   if vk ~= VK.LBUTTON and vk ~= VK.RBUTTON and vk ~= VK.MBUTTON and vk ~= VK.XBUTTON1 and vk ~= VK.XBUTTON2 then
-  --     if keyPressed(vk) then return vk end
-  --   end
-  -- end
-
   return nil
 end
 
--- ================================
--- Visual helpers (Neon border + smooth highlight)
--- ================================
+-- ===== Visual helpers =====
+local function lerp(a, b, t) return a + (b - a) * t end
+
 local function drawNeonBorder(x, y, w, h, r, g, b)
   Susano.DrawRect(x - 4, y - 4, w + 8, h + 8, r, g, b, 0.08, 7.0)
   Susano.DrawRect(x - 3, y - 3, w + 6, h + 6, r, g, b, 0.12, 5.0)
@@ -148,19 +119,45 @@ local function drawNeonBorder(x, y, w, h, r, g, b)
   Susano.DrawRect(x, y, w, h, r, g, b, 0.95, 1.5)
 end
 
-local function lerp(a, b, t)
-  return a + (b - a) * t
+-- ===== Screen size (auto center) =====
+local function getScreenSize()
+  if type(GetActiveScreenResolution) == "function" then
+    local w, h = GetActiveScreenResolution()
+    if w and h and w > 0 and h > 0 then return w, h end
+  end
+  -- fallback
+  return 1920, 1080
 end
 
--- ================================
--- Menu data
--- ================================
+-- ===== UI layout =====
+local UI = {
+  w = 460,
+  h = 560,
+  x = 0,
+  y = 0,
+  headerH = 74,
+  pad = 18,
+  itemH = 40,
+}
+
+local function recenter()
+  local sw, sh = getScreenSize()
+  UI.x = math.floor((sw - UI.w) / 2)
+  UI.y = math.floor((sh - UI.h) / 2)
+end
+
+recenter()
+
+-- ===== Drag state =====
+local drag = { active = false, offX = 0, offY = 0 }
+
+-- ===== Menu state =====
 local toggleKey = nil
 
 local bind = {
-  stage = "device",      -- device -> key -> done
-  deviceIndex = 1,       -- 1 keyboard, 2 mouse
-  device = "keyboard"
+  stage = "device",     -- device -> key
+  deviceIndex = 1,      -- 1 keyboard, 2 mouse
+  device = "keyboard",
 }
 
 local menu = {
@@ -169,18 +166,7 @@ local menu = {
   currentSub = nil,
   selected = 1,
 
-  items = {
-    "Player",
-    "Server",
-    "Weapon",
-    "Combat",
-    "Vehicle",
-    "Visual",
-    "Miscellaneous",
-    "Settings",
-    "Search"
-  },
-
+  items = { "Player","Server","Weapon","Combat","Vehicle","Visual","Miscellaneous","Settings","Search" },
   submenus = {
     Player = { "Godmode", "Heal", "Teleport", "Back" },
     Server = { "Restart", "Weather", "Time", "Back" },
@@ -199,54 +185,30 @@ local function clampSelected()
   if menu.selected > #list then menu.selected = 1 end
 end
 
--- ================================
--- Layout (centered)
--- NOTE: Susano draw uses absolute pixels. If your resolution differs, adjust these.
--- ================================
-local SCREEN_W, SCREEN_H = 1920, 1080
-local UI = {
-  w = 460,
-  h = 560,
-  x = math.floor((SCREEN_W - 460) / 2),
-  y = math.floor((SCREEN_H - 560) / 2),
-
-  headerH = 74,
-  pad = 18,
-
-  itemH = 40,
-  listTopPad = 16
-}
-
--- Smooth highlight position
+-- Smooth highlight
 local highlightY = nil
 
 -- Key repeat states
 local repUp = { next = 0, firstDelay = 240, repeatRate = 55 }
 local repDn = { next = 0, firstDelay = 240, repeatRate = 55 }
 
--- ================================
--- DRAW: Device select + key capture
--- ================================
-local function drawBindScreen(now)
+-- ===== Draw: Bind screens =====
+local function drawBindDevice()
   Susano.BeginFrame()
 
-  local x, y, w, h = UI.x, UI.y + 120, UI.w, 220
+  local sw, sh = getScreenSize()
+  local w, h = 560, 210
+  local x = math.floor((sw - w) / 2)
+  local y = math.floor((sh - h) / 2)
 
-  -- panel
-  Susano.DrawRectFilled(x, y, w, h, 0.03, 0.03, 0.03, 0.92, 14)
+  Susano.DrawRectFilled(x, y, w, h, 0.03,0.03,0.03, 0.92, 14)
   drawNeonBorder(x, y, w, h, 1.0, 0.12, 0.12)
 
-  -- header
-  Susano.DrawRectFilled(x, y, w, 56, 0.08, 0.00, 0.00, 1.0, 14)
-  Susano.DrawRectFilled(x, y + 52, w, 4, 0.85, 0.05, 0.05, 1.0, 0)
+  Susano.DrawRectFilled(x, y, w, 56, 0.08,0.00,0.00, 1.0, 14)
+  Susano.DrawRectFilled(x, y + 52, w, 4, 0.85,0.05,0.05, 1.0, 0)
 
-  Susano.DrawText(x + 20, y + 32, "DNB", 28, 1.0, 0.12, 0.12, 1.0)
-  Susano.DrawText(x + 20, y + 86, "Menu Selection", 18, 1, 1, 1, 1)
-
-  local btnY = y + 118
-  local gap = 18
-  local btnW = (w - (UI.pad * 2) - gap) / 2
-  local btnH = 52
+  Susano.DrawText(x + 20, y + 32, "DNB", 28, 1.0,0.12,0.12, 1.0)
+  Susano.DrawText(x + 20, y + 86, "Menu Selection", 18, 1,1,1, 1)
 
   -- device switch
   if keyPressed(VK.LEFT) or keyPressed(VK.RIGHT) then
@@ -254,28 +216,25 @@ local function drawBindScreen(now)
   end
   bind.device = (bind.deviceIndex == 1) and "keyboard" or "mouse"
 
-  -- keyboard button
+  local btnY = y + 118
+  local gap = 18
+  local btnW = (w - (UI.pad * 2) - gap) / 2
+  local btnH = 52
+
   local kx = x + UI.pad
   local mx = kx + btnW + gap
 
   local kSel = (bind.deviceIndex == 1)
-  Susano.DrawRectFilled(kx, btnY, btnW, btnH, kSel and 0.16 or 0.08, 0.00, 0.00, 0.95, 12)
-  Susano.DrawRect(kx, btnY, btnW, btnH, 1.0, 0.16, 0.16, kSel and 0.90 or 0.35, 2.0)
-  Susano.DrawText(kx + 18, btnY + 33, "Keyboard", 18, 1, 1, 1, 1)
+  Susano.DrawRectFilled(kx, btnY, btnW, btnH, kSel and 0.16 or 0.08, 0.00,0.00, 0.95, 12)
+  Susano.DrawRect(kx, btnY, btnW, btnH, 1.0,0.16,0.16, kSel and 0.90 or 0.35, 2.0)
+  Susano.DrawText(kx + 18, btnY + 33, "Keyboard", 18, 1,1,1, 1)
 
-  -- mouse button
   local mSel = (bind.deviceIndex == 2)
-  Susano.DrawRectFilled(mx, btnY, btnW, btnH, mSel and 0.16 or 0.08, 0.00, 0.00, 0.95, 12)
-  Susano.DrawRect(mx, btnY, btnW, btnH, 1.0, 0.16, 0.16, mSel and 0.90 or 0.35, 2.0)
-  Susano.DrawText(mx + 18, btnY + 33, "Mouse", 18, 1, 1, 1, 1)
+  Susano.DrawRectFilled(mx, btnY, btnW, btnH, mSel and 0.16 or 0.08, 0.00,0.00, 0.95, 12)
+  Susano.DrawRect(mx, btnY, btnW, btnH, 1.0,0.16,0.16, mSel and 0.90 or 0.35, 2.0)
+  Susano.DrawText(mx + 18, btnY + 33, "Mouse", 18, 1,1,1, 1)
 
-  Susano.DrawText(x + 20, y + 198, "ENTER: choisir  |  ESC: annuler", 16, 0.85, 0.85, 0.85, 0.95)
-
-  -- next stage
-  if keyPressed(VK.ESC) then
-    -- leave overlay on, still waiting
-    -- (you can also disable overlay here if you want)
-  end
+  Susano.DrawText(x + 20, y + 196, "ENTER: choisir  |  ESC: quitter", 16, 0.85,0.85,0.85, 0.95)
 
   if keyPressed(VK.ENTER) then
     bind.stage = "key"
@@ -284,118 +243,133 @@ local function drawBindScreen(now)
   Susano.SubmitFrame()
 end
 
-local function drawKeyCapture(now)
+local function drawBindKey()
   Susano.BeginFrame()
 
-  local x, y, w, h = UI.x, UI.y + 120, UI.w, 220
+  local sw, sh = getScreenSize()
+  local w, h = 560, 210
+  local x = math.floor((sw - w) / 2)
+  local y = math.floor((sh - h) / 2)
 
-  Susano.DrawRectFilled(x, y, w, h, 0.03, 0.03, 0.03, 0.92, 14)
+  Susano.DrawRectFilled(x, y, w, h, 0.03,0.03,0.03, 0.92, 14)
   drawNeonBorder(x, y, w, h, 1.0, 0.12, 0.12)
 
-  Susano.DrawRectFilled(x, y, w, 56, 0.08, 0.00, 0.00, 1.0, 14)
-  Susano.DrawRectFilled(x, y + 52, w, 4, 0.85, 0.05, 0.05, 1.0, 0)
+  Susano.DrawRectFilled(x, y, w, 56, 0.08,0.00,0.00, 1.0, 14)
+  Susano.DrawRectFilled(x, y + 52, w, 4, 0.85,0.05,0.05, 1.0, 0)
 
-  Susano.DrawText(x + 20, y + 32, "DNB", 28, 1.0, 0.12, 0.12, 1.0)
-  Susano.DrawText(x + 20, y + 92, ("Appuie sur une touche (%s) ..."):format(bind.device), 18, 1, 1, 1, 1)
-  Susano.DrawText(x + 20, y + 128, "La touche choisie servira a ouvrir/fermer le menu.", 16, 0.85, 0.85, 0.85, 0.95)
-  Susano.DrawText(x + 20, y + 198, "ESC: retour", 16, 0.85, 0.85, 0.85, 0.95)
-
-  if keyPressed(VK.ESC) then
-    bind.stage = "device"
-    Susano.SubmitFrame()
-    return nil
-  end
+  Susano.DrawText(x + 20, y + 32, "DNB", 28, 1.0,0.12,0.12, 1.0)
+  Susano.DrawText(x + 20, y + 98, ("Appuie sur une touche (%s) ..."):format(bind.device), 18, 1,1,1, 1)
+  Susano.DrawText(x + 20, y + 196, "ESC: retour", 16, 0.85,0.85,0.85, 0.95)
 
   local vk = nil
-  if bind.device == "keyboard" then
-    vk = detectKeyboardBind()
+  if not keyPressed(VK.ESC) then
+    if bind.device == "keyboard" then
+      vk = detectKeyboardBind()
+    else
+      vk = detectMouseBind()
+    end
   else
-    vk = detectMouseBind()
+    bind.stage = "device"
   end
 
   Susano.SubmitFrame()
   return vk
 end
 
--- ================================
--- DRAW: Main menu (Phaze-like layout)
--- ================================
-local function drawMenu(now)
+-- ===== Draw: Main menu (centered + drag header) =====
+local function drawMenu()
   Susano.BeginFrame()
 
   local x, y, w, h = UI.x, UI.y, UI.w, UI.h
 
-  -- background + neon
-  Susano.DrawRectFilled(x, y, w, h, 0.03, 0.03, 0.03, 0.92, 18)
+  -- Drag only on header (mouse), doesn't change keyboard nav
+  local cursor = Susano.GetCursorPos()
+  local mx, my = cursor.x, cursor.y
+
+  local hoveringHeader =
+    mx >= x and mx <= x + w and
+    my >= y and my <= y + UI.headerH
+
+  local lPressed = keyPressed(VK.LBUTTON)
+  local lDown = keyDown(VK.LBUTTON)
+
+  if lPressed and hoveringHeader then
+    drag.active = true
+    drag.offX = mx - UI.x
+    drag.offY = my - UI.y
+  end
+  if not lDown then drag.active = false end
+
+  if drag.active then
+    UI.x = math.floor(mx - drag.offX)
+    UI.y = math.floor(my - drag.offY)
+  end
+
+  -- Background + neon
+  Susano.DrawRectFilled(x, y, w, h, 0.03,0.03,0.03, 0.92, 18)
   drawNeonBorder(x, y, w, h, 1.0, 0.10, 0.10)
 
-  -- header
-  Susano.DrawRectFilled(x, y, w, UI.headerH, 0.08, 0.00, 0.00, 1.0, 18)
-  Susano.DrawRectFilled(x, y + UI.headerH - 5, w, 5, 0.85, 0.05, 0.05, 1.0, 0)
-
-  Susano.DrawText(x + 22, y + 38, "DNB", 30, 1.0, 0.12, 0.12, 1.0)
+  -- Header
+  Susano.DrawRectFilled(x, y, w, UI.headerH, 0.08,0.00,0.00, 1.0, 18)
+  Susano.DrawRectFilled(x, y + UI.headerH - 5, w, 5, 0.85,0.05,0.05, 1.0, 0)
+  Susano.DrawText(x + 22, y + 38, "DNB", 30, 1.0,0.12,0.12, 1.0)
 
   local subtitle = (menu.state == "main") and "Main menu" or ("Menu: " .. tostring(menu.currentSub))
-  Susano.DrawText(x + 22, y + UI.headerH + 18, subtitle, 16, 0.85, 0.85, 0.85, 0.95)
-  Susano.DrawText(x + 22, y + UI.headerH + 42, ("Toggle: %s"):format(keyName(toggleKey)), 14, 0.85, 0.85, 0.85, 0.75)
+  Susano.DrawText(x + 22, y + UI.headerH + 18, subtitle, 16, 0.85,0.85,0.85, 0.95)
+  Susano.DrawText(x + 22, y + UI.headerH + 42, ("Toggle: %s"):format(keyName(toggleKey)), 14, 0.85,0.85,0.85, 0.75)
 
-  -- list area
+  -- List
   local list = getList()
   local listX = x + UI.pad
   local listY = y + UI.headerH + 78
   local listW = w - (UI.pad * 2)
 
-  -- compute highlight target
   local targetY = listY + (menu.selected - 1) * UI.itemH
   if highlightY == nil then highlightY = targetY end
-  highlightY = lerp(highlightY, targetY, 0.22) -- smooth
+  highlightY = lerp(highlightY, targetY, 0.22)
 
-  -- draw highlight (smooth)
-  Susano.DrawRectFilled(listX, highlightY, listW, UI.itemH, 0.85, 0.05, 0.05, 1.0, 10)
-  Susano.DrawRect(listX, highlightY, listW, UI.itemH, 1.0, 0.16, 0.16, 0.65, 2.0)
+  -- highlight (smooth)
+  Susano.DrawRectFilled(listX, highlightY, listW, UI.itemH, 0.85,0.05,0.05, 1.0, 10)
+  Susano.DrawRect(listX, highlightY, listW, UI.itemH, 1.0,0.16,0.16, 0.65, 2.0)
 
-  -- draw items
   for i, label in ipairs(list) do
     local iy = listY + (i - 1) * UI.itemH
+    Susano.DrawRectFilled(listX, iy, listW, UI.itemH, 0.07,0.07,0.07, 0.78, 10)
+    Susano.DrawText(listX + 16, iy + 26, label, 16, 1,1,1, 1)
 
-    -- subtle item background
-    Susano.DrawRectFilled(listX, iy, listW, UI.itemH, 0.07, 0.07, 0.07, 0.78, 10)
-
-    -- text
-    Susano.DrawText(listX + 16, iy + 26, label, 16, 1, 1, 1, 1)
-
-    -- arrow only for main categories
     if menu.state == "main" then
-      Susano.DrawText(listX + listW - 18, iy + 26, ">", 16, 1.0, 0.25, 0.25, 1.0)
+      Susano.DrawText(listX + listW - 18, iy + 26, ">", 16, 1.0,0.25,0.25, 1.0)
     end
   end
 
-  -- footer hint
-  Susano.DrawText(x + 22, y + h - 24, "Delete: Back  |  Esc: Close  |  Arrows: Navigate", 14, 0.85, 0.85, 0.85, 0.70)
+  Susano.DrawText(x + 22, y + h - 24, "Delete: Back  |  Esc: Close  |  Drag: Header", 14, 0.85,0.85,0.85, 0.70)
 
   Susano.SubmitFrame()
 end
 
 -- ================================
--- MAIN THREAD
+-- Main thread
 -- ================================
 Citizen.CreateThread(function()
-  Citizen.Wait(1200)
+  Citizen.Wait(900)
 
-  -- overlay on for bind + menu
+  -- overlay on for bind + menu interaction
   Susano.EnableOverlay(true)
 
   while true do
     Citizen.Wait(0)
-
     local now = GetGameTimer()
 
-    -- ====== BIND FLOW ======
+    -- ===== BIND FLOW =====
     if not toggleKey then
       if bind.stage == "device" then
-        drawBindScreen(now)
+        drawBindDevice()
+        if keyPressed(VK.ESC) then
+          -- Optional: disable overlay if user cancels
+          -- Susano.EnableOverlay(false)
+        end
       else
-        local vk = drawKeyCapture(now)
+        local vk = drawBindKey()
         if vk then
           toggleKey = vk
           menu.open = true
@@ -403,14 +377,14 @@ Citizen.CreateThread(function()
           menu.currentSub = nil
           menu.selected = 1
           highlightY = nil
+          recenter()
           Susano.EnableOverlay(true)
         end
       end
-
       goto continue
     end
 
-    -- ====== TOGGLE MENU ======
+    -- ===== TOGGLE MENU =====
     if keyPressed(toggleKey) then
       menu.open = not menu.open
       Susano.EnableOverlay(menu.open)
@@ -421,14 +395,14 @@ Citizen.CreateThread(function()
       goto continue
     end
 
-    -- ====== CLOSE ======
+    -- ===== CLOSE =====
     if keyPressed(VK.ESC) then
       menu.open = false
       Susano.EnableOverlay(false)
       goto continue
     end
 
-    -- ====== NAV (smooth repeat) ======
+    -- ===== NAV (smooth repeat) =====
     if repeatKey(VK.UP, repUp, now) then
       menu.selected = menu.selected - 1
       clampSelected()
@@ -439,7 +413,7 @@ Citizen.CreateThread(function()
       clampSelected()
     end
 
-    -- Enter submenu (→) or Enter
+    -- Enter submenu (→ or Enter)
     if keyPressed(VK.RIGHT) or keyPressed(VK.ENTER) then
       if menu.state == "main" then
         local name = menu.items[menu.selected]
@@ -450,7 +424,6 @@ Citizen.CreateThread(function()
           highlightY = nil
         end
       else
-        -- submenu: select item (example behavior)
         local list = getList()
         local choice = list[menu.selected]
         if choice == "Back" then
@@ -470,20 +443,8 @@ Citizen.CreateThread(function()
       highlightY = nil
     end
 
-    -- also allow selecting Back item with Enter
-    if keyPressed(VK.ENTER) and menu.state == "submenu" then
-      local list = getList()
-      local choice = list[menu.selected]
-      if choice == "Back" then
-        menu.state = "main"
-        menu.currentSub = nil
-        menu.selected = 1
-        highlightY = nil
-      end
-    end
-
-    -- draw
-    drawMenu(now)
+    -- Draw menu
+    drawMenu()
 
     ::continue::
   end
