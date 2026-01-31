@@ -832,6 +832,43 @@ Citizen.CreateThread(function()
                             ClearDrawOrigin()
                         end
 
+                        -- HEALTH BAR
+                        if esp_health_bar then
+                            local maxHealth = GetEntityMaxHealth(ped)
+                            local currentHealth = GetEntityHealth(ped)
+                            local healthPercent = (currentHealth - 100) / (maxHealth - 100)
+                            healthPercent = math.max(0, math.min(1, healthPercent))
+
+                            SetDrawOrigin(coords.x, coords.y, coords.z + 1.2, 0)
+                            
+                            -- Background bar (dark)
+                            DrawRect(0.0, 0.0, 0.08, 0.015, 0, 0, 0, 200)
+                            
+                            -- Health bar (red to green)
+                            local r = healthPercent < 0.5 and 255 or (255 - healthPercent * 510)
+                            local g = healthPercent > 0.5 and 255 or (healthPercent * 510)
+                            DrawRect(-0.04 + (healthPercent * 0.04), 0.0, healthPercent * 0.08, 0.015, r, g, 0, 255)
+                            
+                            ClearDrawOrigin()
+                        end
+
+                        -- ARMOR BAR
+                        if esp_armor_bar then
+                            local armor = GetPedArmour(ped)
+                            local armorPercent = armor / 100.0
+                            armorPercent = math.max(0, math.min(1, armorPercent))
+
+                            SetDrawOrigin(coords.x, coords.y, coords.z + 1.05, 0)
+                            
+                            -- Background bar (dark)
+                            DrawRect(0.0, 0.0, 0.08, 0.015, 0, 0, 0, 200)
+                            
+                            -- Armor bar (blue)
+                            DrawRect(-0.04 + (armorPercent * 0.04), 0.0, armorPercent * 0.08, 0.015, 0, 150, 255, 255)
+                            
+                            ClearDrawOrigin()
+                        end
+
                         -- DISTANCE (blanc, max 200m)
                         if esp_distance then
                             local displayDist = dist
