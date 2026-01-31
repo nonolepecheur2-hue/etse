@@ -17,16 +17,9 @@ local categories = {
     main = {
         title = "Main",
         items = {
-            {label = "Player", action = "category", target = "player"},
-            {label = "Serveur", action = "category", target = "server"},
-            {label = "Combat", action = "category", target = "combat"},
-            {label = "Vehicule", action = "category", target = "vehicle"},
-            {label = "Visual", action = "category", target = "visual"},
-            {label = "Parametres", action = "category", target = "settings"},
+            {label = "Player", action = "category", target = "player"}
         }
     },
-
-    -- PLAYER
     player = {
         title = "Player",
         items = {
@@ -57,112 +50,7 @@ local categories = {
             {label = "Throw From Vehicle", action = "throwvehicle"},
             {label = "Super Strength", action = "superstrength"}
         }
-    },
-
-    -- SERVEUR
-    server = {
-        title = "Serveur",
-        items = {
-            {label = "Infos", action = "category", target = "server_info"},
-            {label = "Utilitaires", action = "category", target = "server_utils"},
-        }
-    },
-    server_info = {
-        title = "Serveur - Infos",
-        items = {
-            {label = "Placeholder", action = "close"} -- remplace par tes actions
-        }
-    },
-    server_utils = {
-        title = "Serveur - Utilitaires",
-        items = {
-            {label = "Placeholder", action = "close"} -- remplace par tes actions
-        }
-    },
-
-    -- COMBAT
-    combat = {
-        title = "Combat",
-        items = {
-            {label = "Armes", action = "category", target = "combat_weapons"},
-            {label = "Autres", action = "category", target = "combat_other"},
-        }
-    },
-    combat_weapons = {
-        title = "Combat - Armes",
-        items = {
-            {label = "Placeholder", action = "close"}
-        }
-    },
-    combat_other = {
-        title = "Combat - Autres",
-        items = {
-            {label = "Placeholder", action = "close"}
-        }
-    },
-
-    -- VEHICULE
-    vehicle = {
-        title = "Vehicule",
-        items = {
-            {label = "Gestion", action = "category", target = "vehicle_manage"},
-            {label = "Options", action = "category", target = "vehicle_options"},
-        }
-    },
-    vehicle_manage = {
-        title = "Vehicule - Gestion",
-        items = {
-            {label = "Placeholder", action = "close"}
-        }
-    },
-    vehicle_options = {
-        title = "Vehicule - Options",
-        items = {
-            {label = "Placeholder", action = "close"}
-        }
-    },
-
-    -- VISUAL
-    visual = {
-        title = "Visual",
-        items = {
-            {label = "HUD", action = "category", target = "visual_hud"},
-            {label = "Effets", action = "category", target = "visual_fx"},
-        }
-    },
-    visual_hud = {
-        title = "Visual - HUD",
-        items = {
-            {label = "Placeholder", action = "close"}
-        }
-    },
-    visual_fx = {
-        title = "Visual - Effets",
-        items = {
-            {label = "Placeholder", action = "close"}
-        }
-    },
-
-    -- PARAMETRES
-    settings = {
-        title = "Parametres",
-        items = {
-            {label = "Theme", action = "category", target = "settings_theme"},
-            {label = "Menu", action = "category", target = "settings_menu"},
-        }
-    },
-    settings_theme = {
-        title = "Parametres - Theme",
-        items = {
-            {label = "Placeholder", action = "close"}
-        }
-    },
-    settings_menu = {
-        title = "Parametres - Menu",
-        items = {
-            {label = "Placeholder", action = "close"}
-        }
-    },
+    }
 }
 
 
