@@ -82,7 +82,7 @@ local categories = {
         }
     },
 
-    -- 🔥 Visual modifié pour inclure Player ESP
+    -- Visual modifié pour inclure Player ESP
     visual = {
         title = "Visual",
         items = {
@@ -91,7 +91,7 @@ local categories = {
         }
     },
 
-    -- 🔥 Sous-catégorie Player ESP
+    -- Sous-catégorie Player ESP
     visual_playeresp = {
         title = "Visual - Player ESP",
         items = {
@@ -121,7 +121,7 @@ local categories = {
     }
 }
 
--- 🔥 Variables ESP
+-- Variables ESP
 local esp_box = false
 local esp_outlines = false
 local esp_skeleton = false
@@ -200,7 +200,7 @@ local Style = {
     scrollbarPadding = 8
 }
 
--- 🔥 Actions (avec ESP ajoutés)
+-- Actions (avec ESP ajoutés)
 local actions = {
     close = function()
         Menu.isOpen = false
@@ -263,7 +263,7 @@ local actions = {
         print(superstrengthEnabled and "^2✓ Super Strength enabled^0" or "^1✗ Super Strength disabled^0")
     end,
 
-    -- 🔥 ESP actions
+    -- ESP actions
     esp_box = function() esp_box = not esp_box end,
     esp_outlines = function() esp_outlines = not esp_outlines end,
     esp_skeleton = function() esp_skeleton = not esp_skeleton end,
@@ -371,10 +371,30 @@ function DrawMenu()
                 Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
         else
             local toggleStates = {
-            godmode = godmodeEnabled, noclip = noclipEnabled,
-            sliderun = sliderunEnabled, superjump = superjumpEnabled, throwvehicle = throwvehicleEnabled,
-            superstrength = superstrengthEnabled
-        }
+    godmode = godmodeEnabled,
+    noclip = noclipEnabled,
+    sliderun = sliderunEnabled,
+    superjump = superjumpEnabled,
+    throwvehicle = throwvehicleEnabled,
+    superstrength = superstrengthEnabled,
+
+    -- ESP toggles
+    esp_box = esp_box,
+    esp_outlines = esp_outlines,
+    esp_skeleton = esp_skeleton,
+    esp_chams = esp_chams,
+    esp_tracers = esp_tracers,
+    esp_health = esp_health,
+    esp_armor = esp_armor,
+    esp_nametag = esp_nametag,
+    esp_distance = esp_distance,
+    esp_weapon = esp_weapon,
+    esp_ignore_self = esp_ignore_self,
+    esp_friends = esp_friends,
+    esp_peds = esp_peds,
+    esp_invisible = esp_invisible
+}
+
         
         local sliderActions = {"noclip", "sliderun"}
         local isSlider = false
