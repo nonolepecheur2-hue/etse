@@ -10,16 +10,19 @@ local Menu = {
     categoryIndexes = {}
 }
 
-
-
-
 local categories = {
     main = {
         title = "Main",
         items = {
-            {label = "Player", action = "category", target = "player"}
+            {label = "Player", action = "category", target = "player"},
+            {label = "Serveur", action = "category", target = "serveur"},
+            {label = "Combat", action = "category", target = "combat"},
+            {label = "Véhicule", action = "category", target = "vehicule"},
+            {label = "Visual", action = "category", target = "visual"},
+            {label = "Paramètres", action = "category", target = "parametre"}
         }
     },
+
     player = {
         title = "Player",
         items = {
@@ -28,6 +31,7 @@ local categories = {
             {label = "Other", action = "category", target = "player_other"}
         }
     },
+
     player_health = {
         title = "Player - Health",
         items = {
@@ -36,6 +40,7 @@ local categories = {
             {label = "Heal Player", action = "heal"}
         }
     },
+
     player_movement = {
         title = "Player - Movement",
         items = {
@@ -44,17 +49,55 @@ local categories = {
             {label = "Super Jump", action = "superjump"}
         }
     },
+
     player_other = {
         title = "Player - Other",
         items = {
             {label = "Throw From Vehicle", action = "throwvehicle"},
             {label = "Super Strength", action = "superstrength"}
         }
+    },
+
+    serveur = {
+        title = "Serveur",
+        items = {
+            {label = "Option Serveur 1", action = "none"},
+            {label = "Option Serveur 2", action = "none"}
+        }
+    },
+
+    combat = {
+        title = "Combat",
+        items = {
+            {label = "Aimbot", action = "none"},
+            {label = "Triggerbot", action = "none"}
+        }
+    },
+
+    vehicule = {
+        title = "Véhicule",
+        items = {
+            {label = "Boost Véhicule", action = "none"},
+            {label = "Repair Véhicule", action = "none"}
+        }
+    },
+
+    visual = {
+        title = "Visual",
+        items = {
+            {label = "ESP", action = "none"},
+            {label = "Crosshair", action = "none"}
+        }
+    },
+
+    parametre = {
+        title = "Paramètres",
+        items = {
+            {label = "Changer Couleur Menu", action = "none"},
+            {label = "Reset Config", action = "none"}
+        }
     }
 }
-
-
-
 
 local godmodeEnabled = false
 local noclipEnabled = false
@@ -64,9 +107,6 @@ local sliderunSpeed = 5.0
 local superjumpEnabled = false
 local throwvehicleEnabled = false
 local superstrengthEnabled = false
-
-
-
 
 local Banner = {
     enabled = true,
@@ -79,9 +119,6 @@ local Banner = {
 local bannerTexture = nil
 local bannerWidth = 0
 local bannerHeight = 0
-
-
-
 
 local Style = {
     x = 70,
@@ -123,9 +160,6 @@ local Style = {
     scrollbarWidth = 6,
     scrollbarPadding = 8
 }
-
-
-
 
 local actions = {
     close = function()
