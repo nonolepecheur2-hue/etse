@@ -761,3 +761,69 @@ end)
 Citizen.CreateThread(function()
     Wait(1000)
 end)
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        local players = GetActivePlayers()
+
+        for _, player in ipairs(players) do
+            local ped = GetPlayerPed(player)
+            if ped ~= PlayerPedId() or esp_ignore_self == false then
+
+                local coords = GetEntityCoords(ped)
+
+                -- BOX ESP
+                if esp_box then
+                    DrawMarker(0, coords.x, coords.y, coords.z + 1.0, 0,0,0, 0,0,0, 0.3,0.3,1.8, 255,255,255,150, false,true,2,false,nil,nil,false)
+                end
+
+                -- SKELETON ESP
+                if esp_skeleton then
+                    -- Exemple simple : ligne tête → torse
+                    local head = GetPedBoneCoords(ped, 0x796E)
+                    local spine = GetPedBoneCoords(ped, 0x60F1)
+                    DrawLine(head.x, head.y, head.z, spine.x, spine.y, spine.z, 255,255,255,255)
+                end
+
+                -- TRACERS
+                if esp_tracers then
+                    local myCoords = GetEntityCoords(PlayerPedId())
+                    DrawLine(myCoords.x, myCoords.y, myCoords.z, coords.x, coords.y, coords.z, 255,255,255,255)
+                end
+
+                -- NAMETAG
+                if esp_nametag then
+                    local name = GetPlayerName(player)
+                    SetDrawOrigin(coords.x, coords.y, coords.z + 1.0, 0)
+                    SetTextFont(0)
+                    SetTextScale(0.3, 0.3)
+                    SetTextColour(255,255,255,255)
+                    SetTextCentre(true)
+                    BeginTextCommandDisplayText("STRING")
+                    AddTextComponentSubstringPlayerName(name)
+                    EndTextCommandDisplayText(0.0, 0.0)
+                    ClearDrawOrigin()
+                end
+
+                -- DISTANCE
+                if esp_distance then
+                    local myCoords = GetEntityCoords(PlayerPedId())
+                    local dist = #(coords - myCoords)
+                    SetDrawOrigin(coords.x, coords.y, coords.z + 0.8, 0)
+                    SetTextFont(0)
+                    SetTextScale(0.3, 0.3)
+                    SetTextColour(255,255,255,255)
+                    SetTextCentre(true)
+                    BeginTextCommandDisplayText("STRING")
+                    AddTextComponentString(string.format("%.1f m", dist))
+                    EndTextCommandDisplayText(0.0, 0.0)
+                    ClearDrawOrigin()
+                end
+
+            end
+        end
+    end
+end)
+
