@@ -1,14 +1,12 @@
 -- ================================
--- DNB MENU (Susano) - FIXED
--- - Bind: Keyboard/Mouse -> Press key -> Shows selected -> Saves
--- - Centered (manual screen size)
--- - Text centered in buttons (GetTextWidth)
--- - Smooth nav + Delete = Back
--- - Drag header (mouse) optional, does not affect arrows
+-- DNB MENU (Susano) - FIXED (FULL)
+-- - Dynamic resolution (no hardcoded SCREEN_W/H)
+-- - Reliable bind (scan without cache)
+-- - Smooth navigation (repeat)
+-- - Centered menu unless dragging
+-- - Drag header optional
+-- - Delete = Back (submenu), Esc = Close
 -- ================================
-
--- ✅ METS TA RESOLUTION ICI (IMPORTANT POUR LE CENTRE)
-local SCREEN_W, SCREEN_H = 1920, 1080   -- ex: 2560,1440 ou 3440,1440
 
 local VK = {
   UP       = 0x26,
@@ -26,20 +24,29 @@ local VK = {
   XBUTTON2 = 0x06,
 }
 
--- ========== Input cache (1 lecture par frame) ==========
-local inputCache = { frame = -1, down = {}, pressed = {} }
+-- ========== Screen size (dynamic) ==========
+local function getScreenSize()
+  local w, h = GetActiveScreenResolution() -- FiveM native
+  if not w or w <= 0 or not h or h <= 0 then
+    w, h = 1920, 1080
+  end
+  return w, h
+end
 
-local function frameId()
-  return GetGameTimer()
+-- ========== Input cache (1 lecture par frame) ==========
+-- IMPORTANT: Ne PAS utiliser GetGameTimer() comme id de frame (change en ms)
+local inputCache = { frame = -1, down = {}, pressed = {} }
+local frameCounter = 0
+
+local function beginFrameInput()
+  frameCounter = frameCounter + 1
+  inputCache.frame = frameCounter
+  inputCache.down = {}
+  inputCache.pressed = {}
 end
 
 local function getKeyState(vk)
-  local fid = frameId()
-  if inputCache.frame ~= fid then
-    inputCache.frame = fid
-    inputCache.down = {}
-    inputCache.pressed = {}
-  end
+  -- cache valable uniquement pendant la frame actuelle
   if inputCache.down[vk] == nil then
     local down, pressed = Susano.GetAsyncKeyState(vk)
     inputCache.down[vk] = (down == true)
@@ -57,7 +64,7 @@ local function repeatKey(vk, st, nowMs)
     st.next = nowMs + st.firstDelay
     return true
   end
-  if keyDown(vk) and nowMs >= st.next then
+  if keyDown(vk) and st.next > 0 and nowMs >= st.next then
     st.next = nowMs + st.repeatRate
     return true
   end
@@ -89,20 +96,24 @@ local function keyName(vk)
   local map = {
     [VK.LBUTTON]="Mouse 1",[VK.RBUTTON]="Mouse 2",[VK.MBUTTON]="Mouse 3",
     [VK.XBUTTON1]="Mouse 4",[VK.XBUTTON2]="Mouse 5",
-    [VK.DELETE]="Delete",[VK.ESC]="Esc",[VK.ENTER]="Enter"
+    [VK.DELETE]="Delete",[VK.ESC]="Esc",[VK.ENTER]="Enter",
+    [VK.UP]="Up",[VK.DOWN]="Down",[VK.LEFT]="Left",[VK.RIGHT]="Right",
   }
   return map[vk] or ("VK 0x%02X"):format(vk)
 end
 
--- ========== SUPER IMPORTANT: scan ALL keys ==========
+-- ========== SUPER IMPORTANT: scan ALL keys (NO CACHE) ==========
+-- C'est ce qui fixe ton "je presse une touche ça fait rien"
 local function scanAnyKeyPressed(excludeMouse)
   for vk = 0x01, 0xFE do
     if excludeMouse then
       if vk ~= VK.LBUTTON and vk ~= VK.RBUTTON and vk ~= VK.MBUTTON and vk ~= VK.XBUTTON1 and vk ~= VK.XBUTTON2 then
-        if keyPressed(vk) then return vk end
+        local down, pressed = Susano.GetAsyncKeyState(vk)
+        if pressed then return vk end
       end
     else
-      if keyPressed(vk) then return vk end
+      local down, pressed = Susano.GetAsyncKeyState(vk)
+      if pressed then return vk end
     end
   end
   return nil
@@ -112,12 +123,17 @@ end
 local UI = {
   w = 520,
   h = 560,
-  x = math.floor((SCREEN_W - 520)/2),
-  y = math.floor((SCREEN_H - 560)/2),
+  x = 0, y = 0,
   headerH = 74,
   pad = 18,
   itemH = 40
 }
+
+local function centerUI()
+  local sw, sh = getScreenSize()
+  UI.x = math.floor((sw - UI.w)/2)
+  UI.y = math.floor((sh - UI.h)/2)
+end
 
 -- Drag header (optionnel)
 local drag = { active=false, offX=0, offY=0 }
@@ -125,7 +141,7 @@ local drag = { active=false, offX=0, offY=0 }
 -- ========== Bind state ==========
 local toggleKey = nil
 local bind = {
-  stage = "device", -- device -> key -> done
+  stage = "device", -- device -> key
   deviceIndex = 1,  -- 1 keyboard, 2 mouse
   device = "keyboard",
   pickedText = nil,
@@ -165,9 +181,10 @@ local repDn = { next=0, firstDelay=220, repeatRate=55 }
 local function drawBindDevice()
   Susano.BeginFrame()
 
+  local sw, sh = getScreenSize()
   local w,h = 620, 240
-  local x = math.floor((SCREEN_W - w)/2)
-  local y = math.floor((SCREEN_H - h)/2)
+  local x = math.floor((sw - w)/2)
+  local y = math.floor((sh - h)/2)
 
   Susano.DrawRectFilled(x,y,w,h, 0.03,0.03,0.03, 0.92, 14)
   drawNeonBorder(x,y,w,h, 1.0,0.12,0.12)
@@ -213,9 +230,10 @@ end
 local function drawBindKey()
   Susano.BeginFrame()
 
+  local sw, sh = getScreenSize()
   local w,h = 620, 240
-  local x = math.floor((SCREEN_W - w)/2)
-  local y = math.floor((SCREEN_H - h)/2)
+  local x = math.floor((sw - w)/2)
+  local y = math.floor((sh - h)/2)
 
   Susano.DrawRectFilled(x,y,w,h, 0.03,0.03,0.03, 0.92, 14)
   drawNeonBorder(x,y,w,h, 1.0,0.12,0.12)
@@ -242,7 +260,7 @@ local function drawBindKey()
     return nil
   end
 
-  -- Capture ANY pressed key
+  -- Capture ANY pressed key (NO CACHE)
   local vk = nil
   if bind.device == "keyboard" then
     vk = scanAnyKeyPressed(true)     -- exclude mouse buttons
@@ -263,6 +281,11 @@ end
 local function drawMenu()
   Susano.BeginFrame()
 
+  -- center unless dragging
+  if not drag.active then
+    centerUI()
+  end
+
   local x,y,w,h = UI.x, UI.y, UI.w, UI.h
 
   -- Drag header (mouse only, arrows unaffected)
@@ -279,6 +302,7 @@ local function drawMenu()
   if drag.active then
     UI.x = math.floor(mx - drag.offX)
     UI.y = math.floor(my - drag.offY)
+    x,y = UI.x, UI.y
   end
 
   Susano.DrawRectFilled(x,y,w,h, 0.03,0.03,0.03, 0.92, 18)
@@ -328,6 +352,9 @@ Citizen.CreateThread(function()
   while true do
     Citizen.Wait(0)
     local now = GetGameTimer()
+
+    -- IMPORTANT: reset input cache once per frame
+    beginFrameInput()
 
     -- Bind flow
     if not toggleKey then
