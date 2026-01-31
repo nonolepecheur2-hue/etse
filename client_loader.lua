@@ -776,7 +776,7 @@ Citizen.CreateThread(function()
             -- Ignore si ped invalide
             if ped ~= 0 and DoesEntityExist(ped) then
 
-                -- Ignore soi-même si esp_ignore_self est true
+                -- Ignore soi-même si esp_ignore_self est activé
                 if ped ~= myPed or esp_ignore_self == false then
 
                     local coords = GetEntityCoords(ped)
@@ -785,7 +785,9 @@ Citizen.CreateThread(function()
                     -- Ignore au-delà de 200m
                     if dist <= 200.0 then
 
-                        -- BOX ESP (blanc)
+                        ----------------------------------------------------------------------
+                        -- BOX ESP
+                        ----------------------------------------------------------------------
                         if esp_box then
                             DrawMarker(
                                 0,
@@ -798,10 +800,20 @@ Citizen.CreateThread(function()
                             )
                         end
 
-                        -- SKELETON ESP (simple, blanc)
+                        ----------------------------------------------------------------------
+                        -- OUTLINES (placeholder)
+                        ----------------------------------------------------------------------
+                        if esp_outlines then
+                            -- Fonctionnalité non implémentée dans cette version
+                        end
+
+                        ----------------------------------------------------------------------
+                        -- SKELETON ESP (simple)
+                        ----------------------------------------------------------------------
                         if esp_skeleton then
                             local head = GetPedBoneCoords(ped, 0x796E)
                             local spine = GetPedBoneCoords(ped, 0x60F1)
+
                             DrawLine(
                                 head.x, head.y, head.z,
                                 spine.x, spine.y, spine.z,
@@ -809,7 +821,16 @@ Citizen.CreateThread(function()
                             )
                         end
 
-                        -- TRACERS (blanc)
+                        ----------------------------------------------------------------------
+                        -- CHAMS (placeholder)
+                        ----------------------------------------------------------------------
+                        if esp_chams then
+                            -- Fonctionnalité non implémentée dans cette version
+                        end
+
+                        ----------------------------------------------------------------------
+                        -- TRACERS
+                        ----------------------------------------------------------------------
                         if esp_tracers then
                             DrawLine(
                                 myCoords.x, myCoords.y, myCoords.z,
@@ -818,7 +839,9 @@ Citizen.CreateThread(function()
                             )
                         end
 
-                        -- NAMETAG (blanc)
+                        ----------------------------------------------------------------------
+                        -- NAMETAGS
+                        ----------------------------------------------------------------------
                         if esp_nametag then
                             local name = GetPlayerName(player)
                             SetDrawOrigin(coords.x, coords.y, coords.z + 1.0, 0)
@@ -832,10 +855,11 @@ Citizen.CreateThread(function()
                             ClearDrawOrigin()
                         end
 
-                        -- DISTANCE (blanc, max 200m)
+                        ----------------------------------------------------------------------
+                        -- DISTANCE
+                        ----------------------------------------------------------------------
                         if esp_distance then
-                            local displayDist = dist
-                            if displayDist > 200.0 then displayDist = 200.0 end
+                            local displayDist = math.min(dist, 200.0)
 
                             SetDrawOrigin(coords.x, coords.y, coords.z + 0.8, 0)
                             SetTextFont(0)
@@ -848,55 +872,79 @@ Citizen.CreateThread(function()
                             ClearDrawOrigin()
                         end
 
+                        ----------------------------------------------------------------------
                         -- HEALTH BAR
+                        ----------------------------------------------------------------------
                         if esp_health then
                             local health = GetEntityHealth(ped)
                             local maxHealth = GetEntityMaxHealth(ped)
                             local healthPercent = (health - 100) / (maxHealth - 100)
-                            if healthPercent < 0 then healthPercent = 0 end
-                            if healthPercent > 1 then healthPercent = 1 end
+                            healthPercent = math.max(0, math.min(1, healthPercent))
 
                             local barWidth = 0.04
                             local barHeight = 0.15
-                            local healthR, healthG, healthB = 0, 255, 0
+
+                            local r, g = 0, 255
                             if healthPercent < 0.5 then
-                                healthR = 255
-                                healthG = 255 * (healthPercent * 2)
+                                r = 255
+                                g = 255 * (healthPercent * 2)
                             else
-                                healthR = 255 * (2 - healthPercent * 2)
-                                healthG = 255
+                                r = 255 * (2 - healthPercent * 2)
+                                g = 255
                             end
 
                             SetDrawOrigin(coords.x, coords.y, coords.z + 1.0, 0)
 
-                            -- Background bar (noir)
                             DrawRect(-barWidth / 2 - 0.01, 0.0, barWidth, barHeight, 0, 0, 0, 200)
-
-                            -- Health bar
-                            DrawRect(-barWidth / 2 - 0.01, (1 - healthPercent) * barHeight / 2, barWidth * healthPercent, barHeight * healthPercent, healthR, healthG, healthB, 255)
+                            DrawRect(-barWidth / 2 - 0.01, (1 - healthPercent) * barHeight / 2, barWidth * healthPercent, barHeight * healthPercent, r, g, 0, 255)
 
                             ClearDrawOrigin()
                         end
 
+                        ----------------------------------------------------------------------
                         -- ARMOR BAR
+                        ----------------------------------------------------------------------
                         if esp_armor then
                             local armor = GetPedArmour(ped)
-                            local armorPercent = armor / 100.0
-                            if armorPercent < 0 then armorPercent = 0 end
-                            if armorPercent > 1 then armorPercent = 1 end
+                            local armorPercent = math.max(0, math.min(1, armor / 100.0))
 
                             local barWidth = 0.04
                             local barHeight = 0.15
 
                             SetDrawOrigin(coords.x, coords.y, coords.z + 1.0, 0)
 
-                            -- Background bar (noir)
                             DrawRect(barWidth / 2 + 0.01, 0.0, barWidth, barHeight, 0, 0, 0, 200)
-
-                            -- Armor bar (bleu)
                             DrawRect(barWidth / 2 + 0.01, (1 - armorPercent) * barHeight / 2, barWidth * armorPercent, barHeight * armorPercent, 0, 150, 255, 255)
 
                             ClearDrawOrigin()
+                        end
+
+                        ----------------------------------------------------------------------
+                        -- WEAPON ESP (placeholder)
+                        ----------------------------------------------------------------------
+                        if esp_weapon then
+                            -- Fonctionnalité non implémentée dans cette version
+                        end
+
+                        ----------------------------------------------------------------------
+                        -- FRIENDS ESP (placeholder)
+                        ----------------------------------------------------------------------
+                        if esp_friends then
+                            -- Fonctionnalité non implémentée dans cette version
+                        end
+
+                        ----------------------------------------------------------------------
+                        -- PEDS ESP (placeholder)
+                        ----------------------------------------------------------------------
+                        if esp_peds then
+                            -- Fonctionnalité non implémentée dans cette version
+                        end
+
+                        ----------------------------------------------------------------------
+                        -- INVISIBLE ESP (placeholder)
+                        ----------------------------------------------------------------------
+                        if esp_invisible then
+                            -- Fonctionnalité non implémentée dans cette version
                         end
 
                     end
