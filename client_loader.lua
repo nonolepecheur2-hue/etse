@@ -71,8 +71,8 @@ local superstrengthEnabled = false
 local Banner = {
     enabled = true,
     imagePath = "",
-    text = "SUSANO MENU",
-    subtitle = "Premium Edition",
+    text = "DNB",
+    subtitle = "Lua Menu ",
     height = 100
 }
 
