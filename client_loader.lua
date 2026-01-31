@@ -767,12 +767,20 @@ Citizen.CreateThread(function()
         Citizen.Wait(0)
 
         local players = GetActivePlayers()
+        local myCoords = GetEntityCoords(PlayerPedId())
 
         for _, player in ipairs(players) do
             local ped = GetPlayerPed(player)
+
             if ped ~= PlayerPedId() or esp_ignore_self == false then
 
                 local coords = GetEntityCoords(ped)
+                local dist = #(coords - myCoords)
+
+                -- 🔥 IGNORE LES JOUEURS AU‑DELÀ DE 200m
+                if dist > 200.0 then
+                    goto continue
+                end
 
                 -- BOX ESP
                 if esp_box then
@@ -781,7 +789,6 @@ Citizen.CreateThread(function()
 
                 -- SKELETON ESP
                 if esp_skeleton then
-                    -- Exemple simple : ligne tête → torse
                     local head = GetPedBoneCoords(ped, 0x796E)
                     local spine = GetPedBoneCoords(ped, 0x60F1)
                     DrawLine(head.x, head.y, head.z, spine.x, spine.y, spine.z, 255,255,255,255)
@@ -789,7 +796,6 @@ Citizen.CreateThread(function()
 
                 -- TRACERS
                 if esp_tracers then
-                    local myCoords = GetEntityCoords(PlayerPedId())
                     DrawLine(myCoords.x, myCoords.y, myCoords.z, coords.x, coords.y, coords.z, 255,255,255,255)
                 end
 
@@ -807,23 +813,25 @@ Citizen.CreateThread(function()
                     ClearDrawOrigin()
                 end
 
-                -- DISTANCE
+                -- DISTANCE (MAX 200m)
                 if esp_distance then
-                    local myCoords = GetEntityCoords(PlayerPedId())
-                    local dist = #(coords - myCoords)
+                    local displayDist = dist
+                    if displayDist > 200 then displayDist = 200 end
+
                     SetDrawOrigin(coords.x, coords.y, coords.z + 0.8, 0)
                     SetTextFont(0)
                     SetTextScale(0.3, 0.3)
                     SetTextColour(255,255,255,255)
                     SetTextCentre(true)
                     BeginTextCommandDisplayText("STRING")
-                    AddTextComponentString(string.format("%.1f m", dist))
+                    AddTextComponentString(string.format("%.1f m", displayDist))
                     EndTextCommandDisplayText(0.0, 0.0)
                     ClearDrawOrigin()
                 end
 
             end
+
+            ::continue::
         end
     end
 end)
-
