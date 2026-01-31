@@ -82,11 +82,33 @@ local categories = {
         }
     },
 
+    -- 🔥 MODIFIÉ : Visual devient une catégorie avec Player ESP
     visual = {
         title = "Visual",
         items = {
-            {label = "ESP", action = "none"},
+            {label = "Player ESP", action = "category", target = "visual_playeresp"},
             {label = "Crosshair", action = "none"}
+        }
+    },
+
+    -- 🔥 AJOUT : Sous-catégorie Player ESP
+    visual_playeresp = {
+        title = "Visual - Player ESP",
+        items = {
+            {label = "Box", action = "esp_box"},
+            {label = "Outlines", action = "esp_outlines"},
+            {label = "Skeleton", action = "esp_skeleton"},
+            {label = "Chams", action = "esp_chams"},
+            {label = "Tracers", action = "esp_tracers"},
+            {label = "Health Bar", action = "esp_health"},
+            {label = "Armor Bar", action = "esp_armor"},
+            {label = "Nametags", action = "esp_nametag"},
+            {label = "Distance", action = "esp_distance"},
+            {label = "Weapon", action = "esp_weapon"},
+            {label = "Ignore Self", action = "esp_ignore_self"},
+            {label = "Show Friends", action = "esp_friends"},
+            {label = "Show Pedestrians", action = "esp_peds"},
+            {label = "Show Invisible", action = "esp_invisible"}
         }
     },
 
@@ -98,6 +120,22 @@ local categories = {
         }
     }
 }
+
+-- 🔥 AJOUT : Variables ESP
+local esp_box = false
+local esp_outlines = false
+local esp_skeleton = false
+local esp_chams = false
+local esp_tracers = false
+local esp_health = false
+local esp_armor = false
+local esp_nametag = false
+local esp_distance = false
+local esp_weapon = false
+local esp_ignore_self = false
+local esp_friends = false
+local esp_peds = false
+local esp_invisible = false
 
 local godmodeEnabled = false
 local noclipEnabled = false
@@ -166,21 +204,21 @@ local actions = {
         Menu.isOpen = false
         Susano.ResetFrame()
     end,
+
     category = function(target)
         Menu.categoryIndexes[Menu.currentCategory] = Menu.selectedIndex
         table.insert(Menu.categoryHistory, Menu.currentCategory)
-        
         Menu.transitionDirection = 1
         Menu.transitionOffset = -50
         Menu.currentCategory = target
         Menu.selectedIndex = Menu.categoryIndexes[target] or 1
     end,
-    
+
     godmode = function()
         godmodeEnabled = not godmodeEnabled
         print(godmodeEnabled and "^2✓ Godmode enabled^0" or "^1✗ Godmode disabled^0")
     end,
-    
+
     revive = function()
         local ped = PlayerPedId()
         local coords = GetEntityCoords(ped)
@@ -191,38 +229,55 @@ local actions = {
         ClearPedTasksImmediately(ped)
         print("^2✓ Revived^0")
     end,
-    
+
     heal = function()
         local ped = PlayerPedId()
         SetEntityHealth(ped, GetEntityMaxHealth(ped))
         print("^2✓ Healed^0")
     end,
-    
+
     noclip = function()
         noclipEnabled = not noclipEnabled
         print(noclipEnabled and "^2✓ Noclip enabled^0" or "^1✗ Noclip disabled^0")
     end,
-    
+
     sliderun = function()
         sliderunEnabled = not sliderunEnabled
         print(sliderunEnabled and "^2✓ Slide Run enabled^0" or "^1✗ Slide Run disabled^0")
     end,
-    
+
     superjump = function()
         superjumpEnabled = not superjumpEnabled
         print(superjumpEnabled and "^2✓ Super Jump enabled^0" or "^1✗ Super Jump disabled^0")
     end,
-    
+
     throwvehicle = function()
         throwvehicleEnabled = not throwvehicleEnabled
         print(throwvehicleEnabled and "^2✓ Throw From Vehicle enabled^0" or "^1✗ Throw From Vehicle disabled^0")
     end,
-    
+
     superstrength = function()
         superstrengthEnabled = not superstrengthEnabled
         print(superstrengthEnabled and "^2✓ Super Strength enabled^0" or "^1✗ Super Strength disabled^0")
-    end
+    end,
+
+    -- 🔥 AJOUT : Actions ESP
+    esp_box = function() esp_box = not esp_box end,
+    esp_outlines = function() esp_outlines = not esp_outlines end,
+    esp_skeleton = function() esp_skeleton = not esp_skeleton end,
+    esp_chams = function() esp_chams = not esp_chams end,
+    esp_tracers = function() esp_tracers = not esp_tracers end,
+    esp_health = function() esp_health = not esp_health end,
+    esp_armor = function() esp_armor = not esp_armor end,
+    esp_nametag = function() esp_nametag = not esp_nametag end,
+    esp_distance = function() esp_distance = not esp_distance end,
+    esp_weapon = function() esp_weapon = not esp_weapon end,
+    esp_ignore_self = function() esp_ignore_self = not esp_ignore_self end,
+    esp_friends = function() esp_friends = not esp_friends end,
+    esp_peds = function() esp_peds = not esp_peds end,
+    esp_invisible = function() esp_invisible = not esp_invisible end
 }
+
 
 function DrawMenu()
     if not Menu.isOpen then return end
