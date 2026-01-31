@@ -834,6 +834,8 @@ Citizen.CreateThread(function()
                                 local b1 = GetPedBoneCoords(ped, pair[1])
                                 local b2 = GetPedBoneCoords(ped, pair[2])
 
+                                SetDrawOrigin(0.0, 0.0, 0.0, 0)    
+
                                 DrawLine(
                                     b1.x, b1.y, b1.z,
                                     b2.x, b2.y, b2.z,
@@ -917,10 +919,10 @@ Citizen.CreateThread(function()
                             local healthPercent = (health - 100) / (maxHealth - 100)
                             healthPercent = math.max(0, math.min(1, healthPercent))
 
-                            local barWidth = 0.008
+                            local barWidth = 0.006
                             local barHeight = 0.25
-                            local offsetX = -0.15
-                            local offsetZ = 1.0
+                            local offsetX = -0.05
+                            local offsetZ = 0.5
 
                             local r, g = 0, 255
                             if healthPercent < 0.5 then
