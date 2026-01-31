@@ -82,7 +82,7 @@ local categories = {
         }
     },
 
-    -- 🔥 MODIFIÉ : Visual devient une catégorie avec Player ESP
+    -- 🔥 Visual modifié pour inclure Player ESP
     visual = {
         title = "Visual",
         items = {
@@ -91,7 +91,7 @@ local categories = {
         }
     },
 
-    -- 🔥 AJOUT : Sous-catégorie Player ESP
+    -- 🔥 Sous-catégorie Player ESP
     visual_playeresp = {
         title = "Visual - Player ESP",
         items = {
@@ -121,7 +121,7 @@ local categories = {
     }
 }
 
--- 🔥 AJOUT : Variables ESP
+-- 🔥 Variables ESP
 local esp_box = false
 local esp_outlines = false
 local esp_skeleton = false
@@ -137,6 +137,7 @@ local esp_friends = false
 local esp_peds = false
 local esp_invisible = false
 
+-- Variables existantes
 local godmodeEnabled = false
 local noclipEnabled = false
 local noclipSpeed = 2.0
@@ -199,6 +200,7 @@ local Style = {
     scrollbarPadding = 8
 }
 
+-- 🔥 Actions (avec ESP ajoutés)
 local actions = {
     close = function()
         Menu.isOpen = false
@@ -261,7 +263,7 @@ local actions = {
         print(superstrengthEnabled and "^2✓ Super Strength enabled^0" or "^1✗ Super Strength disabled^0")
     end,
 
-    -- 🔥 AJOUT : Actions ESP
+    -- 🔥 ESP actions
     esp_box = function() esp_box = not esp_box end,
     esp_outlines = function() esp_outlines = not esp_outlines end,
     esp_skeleton = function() esp_skeleton = not esp_skeleton end,
