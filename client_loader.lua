@@ -562,6 +562,7 @@ Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
         
+        -- OUVERTURE / FERMETURE MENU
         local _, f5Pressed = Susano.GetAsyncKeyState(VK_F5)
         if f5Pressed and not lastF5Press then
             Menu.isOpen = not Menu.isOpen
@@ -576,6 +577,7 @@ Citizen.CreateThread(function()
         end
         lastF5Press = f5Pressed
         
+        -- NAVIGATION MENU
         if Menu.isOpen then
             local category = categories[Menu.currentCategory]
             
@@ -625,7 +627,6 @@ Citizen.CreateThread(function()
             if backPressed and not lastBackPress then
                 if Menu.currentCategory ~= "main" then
                     Menu.categoryIndexes[Menu.currentCategory] = Menu.selectedIndex
-                    
                     Menu.transitionDirection = -1
                     Menu.transitionOffset = 50
                     
@@ -650,11 +651,7 @@ Citizen.CreateThread(function()
                 if item then
                     local action = actions[item.action]
                     if action then
-                        if item.target then
-                            action(item.target)
-                        else
-                            action()
-                        end
+                        if item.target then action(item.target) else action() end
                     end
                 end
             end
@@ -663,50 +660,33 @@ Citizen.CreateThread(function()
             DrawMenu()
         end
         
+        -- NOCLIP
         if noclipEnabled then
             local ped = PlayerPedId()
             local entity = ped
             local inVehicle = IsPedInAnyVehicle(ped, false)
-            if inVehicle then
-                entity = GetVehiclePedIsIn(ped, false)
-            end
+            if inVehicle then entity = GetVehiclePedIsIn(ped, false) end
 
             SetEntityCollision(entity, false, false)
-            if inVehicle then
-                FreezeEntityPosition(entity, true)
-            else
-                FreezeEntityPosition(ped, true)
-            end
+            if inVehicle then FreezeEntityPosition(entity, true) else FreezeEntityPosition(ped, true) end
             SetEntityInvincible(ped, true)
 
             local pos = GetEntityCoords(entity, false)
             local camRot = GetGameplayCamRot(2)
             local pitch = math.rad(camRot.x)
             local yaw = math.rad(camRot.z)
-            local forward = { x = -math.sin(yaw) * math.cos(pitch), y =  math.cos(yaw) * math.cos(pitch), z = math.sin(pitch) }
-            local right   = { x =  math.cos(yaw),                       y =  math.sin(yaw),                       z = 0.0 }
+            local forward = { x = -math.sin(yaw) * math.cos(pitch), y = math.cos(yaw) * math.cos(pitch), z = math.sin(pitch) }
+            local right   = { x = math.cos(yaw), y = math.sin(yaw), z = 0.0 }
 
             local speed = noclipSpeed
             if IsControlPressed(0, 21) then speed = speed * 3.0 end
 
-            if IsControlPressed(0, 32) then
-                pos = vector3(pos.x + forward.x * speed, pos.y + forward.y * speed, pos.z + forward.z * speed)
-            end
-            if IsControlPressed(0, 33) then
-                pos = vector3(pos.x - forward.x * speed, pos.y - forward.y * speed, pos.z - forward.z * speed)
-            end
-            if IsControlPressed(0, 35) then
-                pos = vector3(pos.x + right.x * speed, pos.y + right.y * speed, pos.z + right.z * speed)
-            end
-            if IsControlPressed(0, 34) then
-                pos = vector3(pos.x - right.x * speed, pos.y - right.y * speed, pos.z - right.z * speed)
-            end
-            if IsControlPressed(0, 22) then
-                pos = vector3(pos.x, pos.y, pos.z + speed)
-            end
-            if IsControlPressed(0, 36) then
-                pos = vector3(pos.x, pos.y, pos.z - speed)
-            end
+            if IsControlPressed(0, 32) then pos = pos + vector3(forward.x * speed, forward.y * speed, forward.z * speed) end
+            if IsControlPressed(0, 33) then pos = pos - vector3(forward.x * speed, forward.y * speed, forward.z * speed) end
+            if IsControlPressed(0, 35) then pos = pos + vector3(right.x * speed, right.y * speed, right.z * speed) end
+            if IsControlPressed(0, 34) then pos = pos - vector3(right.x * speed, right.y * speed, right.z * speed) end
+            if IsControlPressed(0, 22) then pos = pos + vector3(0, 0, speed) end
+            if IsControlPressed(0, 36) then pos = pos - vector3(0, 0, speed) end
 
             SetEntityCoordsNoOffset(entity, pos.x, pos.y, pos.z, true, true, true)
             if inVehicle then SetEntityVelocity(entity, 0.0, 0.0, 0.0) end
@@ -717,32 +697,29 @@ Citizen.CreateThread(function()
                 SetEntityCollision(veh, true, true)
                 FreezeEntityPosition(veh, false)
             end
-            if not godmodeEnabled then
-                SetEntityInvincible(ped, false)
-            end
+            if not godmodeEnabled then SetEntityInvincible(ped, false) end
             SetEntityCollision(ped, true, true)
             FreezeEntityPosition(ped, false)
         end
 
+        -- GODMODE
         if godmodeEnabled then
             local ped = PlayerPedId()
             SetEntityInvincible(ped, true)
             local health = GetEntityHealth(ped)
             local maxHealth = GetEntityMaxHealth(ped)
-            if health < maxHealth then
-                SetEntityHealth(ped, maxHealth)
-            end
+            if health < maxHealth then SetEntityHealth(ped, maxHealth) end
             SetPedCanRagdoll(ped, false)
             SetPedCanBeKnockedOffVehicle(ped, 1)
         end
         
+        -- SUPERJUMP
         if superjumpEnabled then
             local ped = PlayerPedId()
-            if IsPedOnFoot(ped) then
-                SetSuperJumpThisFrame(PlayerId())
-            end
+            if IsPedOnFoot(ped) then SetSuperJumpThisFrame(PlayerId()) end
         end
         
+        -- SLIDERUN
         if sliderunEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) and not IsPedInAnyVehicle(ped, false) then
@@ -755,41 +732,30 @@ Citizen.CreateThread(function()
                     SetEntityVelocity(ped, forwardX, forwardY, velocity.z)
                 end
             end
-            
-            if invisibleEnabled then
-                local ped = PlayerPedId()
-                SetEntityVisible(ped, false, false)
-                SetEntityAlpha(ped, 0, false)
-                SetPedCanBeTargetted(ped, false)
-                SetPedCanRagdoll(ped, false)
-                SetEntityCollision(ped, false, false)
-                SetPedConfigFlag(ped, 52, true)
-            else
-                local ped = PlayerPedId()
-                SetEntityVisible(ped, true, false)
-                SetEntityAlpha(ped, 255, false)
-                SetPedCanBeTargetted(ped, true)
-                SetPedCanRagdoll(ped, true)
-                SetEntityCollision(ped, true, true)
-                SetPedConfigFlag(ped, 52, false)
-            end 
-         end
-      end
-  end)
-
-Citizen.CreateThread(function()
-    if Banner.enabled and Banner.imagePath then
-        local texId, w, h = Susano.LoadTexture(Banner.imagePath)
-        if texId and texId > 0 then
-            bannerTexture = texId
-            bannerWidth = w
-            bannerHeight = h
-            print("^2✓ Banner loaded: " .. Banner.imagePath .. "^0")
-        else
-            print("^1✗ Unable to load banner^0")
         end
-    end
-end)
+
+        -- INVISIBLE (CORRECTEMENT PLACÉ)
+        if invisibleEnabled then
+            local ped = PlayerPedId()
+            SetEntityVisible(ped, false, false)
+            SetEntityAlpha(ped, 0, false)
+            SetPedCanBeTargetted(ped, false)
+            SetPedCanRagdoll(ped, false)
+            SetEntityCollision(ped, false, false)
+            SetPedConfigFlag(ped, 52, true)
+        else
+            local ped = PlayerPedId()
+            SetEntityVisible(ped, true, false)
+            SetEntityAlpha(ped, 255, false)
+            SetPedCanBeTargetted(ped, true)
+            SetPedCanRagdoll(ped, true)
+            SetEntityCollision(ped, true, true)
+            SetPedConfigFlag(ped, 52, false)
+        end
+
+    end -- FIN DU WHILE
+end) -- FIN DU THREAD
+
 
 Citizen.CreateThread(function()
     Wait(1000)
