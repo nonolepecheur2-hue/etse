@@ -778,7 +778,9 @@ Citizen.CreateThread(function()
             esp_box or esp_outlines or esp_skeleton or esp_chams or esp_tracers or
             esp_health or esp_armor or esp_nametag or esp_distance or esp_weapon or
             esp_ignore_self or esp_friends or esp_peds or esp_invisible
-        ) then goto continue end
+        ) then
+            goto continue
+        end
 
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
@@ -789,7 +791,9 @@ Citizen.CreateThread(function()
             local ped = GetPlayerPed(player)
             if ped == 0 or not DoesEntityExist(ped) then goto skip end
 
-            -- Filtres
+            ----------------------------------------------------------------------
+            -- FILTRES
+            ----------------------------------------------------------------------
             if ped == myPed and esp_ignore_self then goto skip end
 
             local serverId = GetPlayerServerId(player)
@@ -819,7 +823,7 @@ Citizen.CreateThread(function()
             local height = fy - hy
             if height <= 0 then goto skip end
 
-            -- largeur basée sur les deux pieds, élargie légèrement
+            -- largeur basée sur les pieds, élargie un peu pour respirer
             local rawLeft = math.min(flx, frx)
             local rawRight = math.max(flx, frx)
             local rawWidth = rawRight - rawLeft
@@ -831,7 +835,7 @@ Citizen.CreateThread(function()
             local centerY = (hy + fy) / 2
 
             ----------------------------------------------------------------------
-            -- CHAMS
+            -- CHAMS (fond coloré)
             ----------------------------------------------------------------------
             if esp_chams then
                 DrawRect(centerX, centerY, width, height, 0, 150, 255, 80)
@@ -870,7 +874,7 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (SUPERPOSÉ, LÉGÈREMENT DÉCALÉ VERS LA CAM)
+            -- SKELETON (3D, léger offset vers la caméra pour être visible)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
@@ -989,7 +993,3 @@ Citizen.CreateThread(function()
         ::continue::
     end
 end)
-
-
-
-
