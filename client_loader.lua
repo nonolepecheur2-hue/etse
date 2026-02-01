@@ -62,9 +62,15 @@ local categories = {
     serveur = {
         title = "Serveur",
         items = {
+            {label = "Liste des joueurs", action = "category", target = "serveur_playerlist"},
             {label = "Option Serveur 1", action = "none"},
             {label = "Option Serveur 2", action = "none"}
         }
+    },
+
+    serveur_playerlist = {
+        title = "Serveur - Joueurs",
+        items = {} -- rempli automatiquement
     },
 
     combat = {
@@ -83,7 +89,6 @@ local categories = {
         }
     },
 
-    -- Visual modifié pour inclure Player ESP
     visual = {
         title = "Visual",
         items = {
@@ -92,7 +97,6 @@ local categories = {
         }
     },
 
-    -- Sous-catégorie Player ESP
     visual_playeresp = {
         title = "Visual - Player ESP",
         items = {
@@ -121,6 +125,36 @@ local categories = {
         }
     }
 }
+
+-- 🔥🔥🔥 FONCTION PLAYERLIST — PLACÉE AU BON ENDROIT 🔥🔥🔥
+local function RefreshServerPlayerList()
+    local list = {}
+    local myPed = PlayerPedId()
+    local myCoords = GetEntityCoords(myPed)
+
+    for _, player in ipairs(GetActivePlayers()) do
+        local ped = GetPlayerPed(player)
+        if ped ~= 0 and DoesEntityExist(ped) then
+
+            local coords = GetEntityCoords(ped)
+            local dist = #(coords - myCoords)
+
+            if dist <= 200.0 then
+                local name = GetPlayerName(player)
+                local serverId = GetPlayerServerId(player)
+
+                table.insert(list, {
+                    label = string.format("%s [%d] - %.1fm", name, serverId, dist),
+                    action = "select_player",
+                    target = serverId
+                })
+            end
+        end
+    end
+
+    categories.serveur_playerlist.items = list
+end
+
 
 -- Variables ESP
 local esp_box = false
@@ -221,6 +255,12 @@ local actions = {
         table.insert(Menu.categoryHistory, Menu.currentCategory)
         Menu.transitionDirection = 1
         Menu.transitionOffset = -50
+
+        -- 🔥 Rafraîchir la liste des joueurs quand on ouvre la catégorie
+        if target == "serveur_playerlist" then
+            RefreshServerPlayerList()
+        end
+
         Menu.currentCategory = target
         Menu.selectedIndex = Menu.categoryIndexes[target] or 1
     end,
@@ -295,6 +335,7 @@ local actions = {
 }
 
 
+
 function DrawMenu()
     if not Menu.isOpen then return end
     
@@ -312,7 +353,8 @@ function DrawMenu()
     
     local currentY = y
     
-  if Banner.enabled then
+    -- BANNER
+    if Banner.enabled then
         if bannerTexture and bannerTexture > 0 then
             Susano.DrawImage(bannerTexture, x, currentY, width, Banner.height, 1, 1, 1, 1, Style.bannerRounding)
         else
@@ -336,6 +378,7 @@ function DrawMenu()
         currentY = currentY + Banner.height
     end
     
+    -- HEADER
     Susano.DrawRectFilled(x, currentY, width, Style.headerHeight,
         Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], 
         Style.headerRounding)
@@ -344,9 +387,6 @@ function DrawMenu()
     Susano.DrawText(x + 15, currentY + 14, 
         titleText, Style.titleSize, 
         Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-    Susano.DrawText(x + 15.3, currentY + 14, 
-        titleText, Style.titleSize, 
-        Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
     
     local versionText = "v1.0"
     local versionWidth = Susano.GetTextWidth(versionText, Style.footerSize)
@@ -356,11 +396,13 @@ function DrawMenu()
     
     currentY = currentY + Style.headerHeight
     
+    -- ITEMS
     local startY = currentY
     for i, item in ipairs(category.items) do
         local itemY = startY + ((i - 1) * (height + spacing))
         local isSelected = (i == Menu.selectedIndex)
         
+        -- Fond item
         if isSelected then
             Susano.DrawRectFilled(x, itemY, width, height, 
                 Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], 
@@ -371,44 +413,74 @@ function DrawMenu()
                 Style.itemRounding)
         end
         
+        -- Texte item
         local textX = x + 15
         Susano.DrawText(textX, itemY + 12, 
             item.label, Style.itemSize, 
             Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-        Susano.DrawText(textX + 0.3, itemY + 12, 
-            item.label, Style.itemSize, 
-            Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
         
+        -- Flèche catégorie
         if item.action == "category" and item.target then
             local arrowX = x + width - 20
             Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, 
                 Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
+        
+        -- 🔥🔥🔥 BOUTON POUR LES JOUEURS 🔥🔥🔥
+        elseif item.button then
+            local btnWidth = 80
+            local btnHeight = height - 10
+            local btnX = x + width - btnWidth - 15
+            local btnY = itemY + 5
+
+            -- Fond du bouton
+            Susano.DrawRectFilled(
+                btnX, btnY, btnWidth, btnHeight,
+                0.15, 0.15, 0.15, 0.9,
+                6.0
+            )
+
+            -- Texte du bouton
+            Susano.DrawText(
+                btnX + 20, btnY + 10,
+                "Select",
+                Style.itemSize - 2,
+                1.0, 1.0, 1.0, 1.0
+            )
+
+        -- 🔧 Toggles / sliders
         else
             local toggleStates = {
-    godmode = godmodeEnabled,
-    noclip = noclipEnabled,
-    sliderun = sliderunEnabled,
-    superjump = superjumpEnabled,
-    throwvehicle = throwvehicleEnabled,
-    superstrength = superstrengthEnabled,
-    Invisible = invisibleEnabled,
+                godmode = godmodeEnabled,
+                noclip = noclipEnabled,
+                sliderun = sliderunEnabled,
+                superjump = superjumpEnabled,
+                throwvehicle = throwvehicleEnabled,
+                superstrength = superstrengthEnabled,
+                Invisible = invisibleEnabled,
 
-    -- ESP toggles
-    esp_box = esp_box,
-    esp_outlines = esp_outlines,
-    esp_skeleton = esp_skeleton,
-    esp_chams = esp_chams,
-    esp_tracers = esp_tracers,
-    esp_health = esp_health,
-    esp_armor = esp_armor,
-    esp_nametag = esp_nametag,
-    esp_distance = esp_distance,
-    esp_weapon = esp_weapon,
-    esp_ignore_self = esp_ignore_self,
-    esp_friends = esp_friends,
-    esp_peds = esp_peds,
-    esp_invisible = esp_invisible
-}
+                esp_box = esp_box,
+                esp_outlines = esp_outlines,
+                esp_skeleton = esp_skeleton,
+                esp_chams = esp_chams,
+                esp_tracers = esp_tracers,
+                esp_health = esp_health,
+                esp_armor = esp_armor,
+                esp_nametag = esp_nametag,
+                esp_distance = esp_distance,
+                esp_weapon = esp_weapon,
+                esp_ignore_self = esp_ignore_self,
+                esp_friends = esp_friends,
+                esp_peds = esp_peds,
+                esp_invisible = esp_invisible
+            }
+
+            -- (le reste de ton code toggle/slider reste inchangé)
+        end
+    end
+
+    Susano.SubmitFrame()
+end
+
 
         
         local sliderActions = {"noclip", "sliderun"}
