@@ -795,15 +795,16 @@ Citizen.CreateThread(function()
                         ----------------------------------------------------------------------
                         if esp_box then
                             DrawMarker(
-                                0,
+                                2, -- RECTANGLE / CUBE
                                 coords.x, coords.y, coords.z + 1.0,
                                 0.0, 0.0, 0.0,
                                 0.0, 0.0, 0.0,
-                                0.3, 0.3, 1.8,
+                                0.6, 0.6, 1.8, -- largeur, profondeur, hauteur
                                 255, 255, 255, 150,
                                 false, true, 2, false, nil, nil, false
                             )
                         end
+
 
                         ----------------------------------------------------------------------
                         -- SKELETON ESP (FIXED)
