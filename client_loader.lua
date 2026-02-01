@@ -997,3 +997,35 @@ Citizen.CreateThread(function()
         ::continue::
     end
 end)
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(1000) -- refresh toutes les 1 seconde
+
+        local list = {}
+        local myPed = PlayerPedId()
+        local myCoords = GetEntityCoords(myPed)
+
+        for _, player in ipairs(GetActivePlayers()) do
+            local ped = GetPlayerPed(player)
+            if ped ~= 0 and DoesEntityExist(ped) then
+
+                local coords = GetEntityCoords(ped)
+                local dist = #(coords - myCoords)
+
+                local name = GetPlayerName(player)
+                local serverId = GetPlayerServerId(player)
+
+                table.insert(list, {
+                    label = string.format("%s [%d] - %.1fm", name, serverId, dist),
+                    action = "select_player",
+                    target = serverId,
+                    button = true
+                })
+            end
+        end
+
+        categories.serveur_playerlist.items = list
+    end
+end)
+
