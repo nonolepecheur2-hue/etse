@@ -790,36 +790,35 @@ Citizen.CreateThread(function()
                             local top = GetOffsetFromEntityInWorldCoords(ped, 0.0, 0.0, max.z + 0.2)
                             local bottom = GetOffsetFromEntityInWorldCoords(ped, 0.0, 0.0, min.z)
 
-                            local top2D = World3dToScreen2d(top.x, top.y, top.z)
-                            local bottom2D = World3dToScreen2d(bottom.x, bottom.y, bottom.z)
+                            local topOnScreen, x1, y1 = World3dToScreen2d(top.x, top.y, top.z)
+                            local bottomOnScreen, x2, y2 = World3dToScreen2d(bottom.x, bottom.y, bottom.z)
 
-                            if top2D and bottom2D then
-                                local x1, y1 = top2D.x, top2D.y
-                                local x2, y2 = bottom2D.x, bottom2D.y
-
+                            if topOnScreen and bottomOnScreen then
                                 local height = y2 - y1
-                                local width = height * 0.45
+                                if height > 0 then
+                                    local width = height * 0.45
 
-                                local left = x1 - width
-                                local right = x1 + width
+                                    local left = x1 - width
+                                    local right = x1 + width
 
-                                local corner = 0.015
+                                    local corner = 0.015
 
-                                -- Top left
-                                DrawLine(left, y1, 0.0, left + corner, y1, 0.0, 255, 255, 255, 255)
-                                DrawLine(left, y1, 0.0, left, y1 + corner, 0.0, 255, 255, 255, 255)
+                                    -- Top left
+                                    DrawLine(left, y1, 0.0, left + corner, y1, 0.0, 255, 255, 255, 255)
+                                    DrawLine(left, y1, 0.0, left, y1 + corner, 0.0, 255, 255, 255, 255)
 
-                                -- Top right
-                                DrawLine(right, y1, 0.0, right - corner, y1, 0.0, 255, 255, 255, 255)
-                                DrawLine(right, y1, 0.0, right, y1 + corner, 0.0, 255, 255, 255, 255)
+                                    -- Top right
+                                    DrawLine(right, y1, 0.0, right - corner, y1, 0.0, 255, 255, 255, 255)
+                                    DrawLine(right, y1, 0.0, right, y1 + corner, 0.0, 255, 255, 255, 255)
 
-                                -- Bottom left
-                                DrawLine(left, y2, 0.0, left + corner, y2, 0.0, 255, 255, 255, 255)
-                                DrawLine(left, y2, 0.0, left, y2 - corner, 0.0, 255, 255, 255, 255)
+                                    -- Bottom left
+                                    DrawLine(left, y2, 0.0, left + corner, y2, 0.0, 255, 255, 255, 255)
+                                    DrawLine(left, y2, 0.0, left, y2 - corner, 0.0, 255, 255, 255, 255)
 
-                                -- Bottom right
-                                DrawLine(right, y2, 0.0, right - corner, y2, 0.0, 255, 255, 255, 255)
-                                DrawLine(right, y2, 0.0, right, y2 - corner, 0.0, 255, 255, 255, 255)
+                                    -- Bottom right
+                                    DrawLine(right, y2, 0.0, right - corner, y2, 0.0, 255, 255, 255, 255)
+                                    DrawLine(right, y2, 0.0, right, y2 - corner, 0.0, 255, 255, 255, 255)
+                                end
                             end
                         end
 
