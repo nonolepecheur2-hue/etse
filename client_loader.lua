@@ -669,31 +669,25 @@ end
             local toggleX = x + width - toggleWidth - 20
             local toggleY = itemY + (height - toggleHeight) / 2
             local toggleRounding = 10.0
-            
+
             local isOn = toggleStates[item.action]
-            
+
             if isOn then
-                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight, 
+                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight,
                     Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 0.9, toggleRounding)
             else
-                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight, 
+                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight,
                     0.3, 0.3, 0.3, 0.6, toggleRounding)
             end
-            
+
             local thumbSize = 16
             local thumbY = toggleY + (toggleHeight - thumbSize) / 2
-            local thumbX
-            if isOn then
-                thumbX = toggleX + toggleWidth - thumbSize - 2
-            else
-                thumbX = toggleX + 2
-            end
-            
-            Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize, 
+            local thumbX = isOn and (toggleX + toggleWidth - thumbSize - 2) or (toggleX + 2)
+
+            Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize,
                 1.0, 1.0, 1.0, 1.0, 8.0)
-            end
         end
-    end
+    end 
     
     if #category.items > 0 then
         local itemsAreaHeight = #category.items * (height + spacing)
