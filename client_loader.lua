@@ -826,10 +826,13 @@ Citizen.CreateThread(function()
             esp_ignore_self or esp_friends or esp_peds or esp_invisible
         ) then goto continue end
 
-        local myPed = PlayerPedId()
-        local myCoords = GetEntityCoords(myPed)
+        local myPed      = PlayerPedId()
+        local myCoords   = GetEntityCoords(myPed)
         local myServerId = GetPlayerServerId(PlayerId())
-        local camCoords = GetGameplayCamCoord()
+        local camCoords  = GetGameplayCamCoord()
+
+        -- Frame Susano
+        BeginFrame()
 
         for _, player in ipairs(GetActivePlayers()) do
             local ped = GetPlayerPed(player)
@@ -842,39 +845,37 @@ Citizen.CreateThread(function()
             if esp_friends and serverId == myServerId then goto skip end
 
             if not IsPedAPlayer(ped) and not esp_peds then goto skip end
-
-            -- Si le joueur est invisible et que esp_invisible est false, on skip
             if not IsEntityVisible(ped) and not esp_invisible then goto skip end
 
             local coords = GetEntityCoords(ped)
-            local dist = #(coords - myCoords)
+            local dist   = #(coords - myCoords)
             if dist > 300.0 then goto skip end
 
             ----------------------------------------------------------------------
             -- PROJECTION 2D : TÊTE + PIED GAUCHE + PIED DROIT
             ----------------------------------------------------------------------
-            local head = GetPedBoneCoords(ped, 31086)
+            local head  = GetPedBoneCoords(ped, 31086)
             local footL = GetPedBoneCoords(ped, 14201)
             local footR = GetPedBoneCoords(ped, 52301)
 
-            local hOk, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.18)
-            local flOk, flx, fly = World3dToScreen2d(footL.x, footL.y, footL.z - 0.02)
-            local frOk, frx, fry = World3dToScreen2d(footR.x, footR.y, footR.z - 0.02)
+            local hOk, hx, hy   = WorldToScreen(head.x,  head.y,  head.z  + 0.18)
+            local flOk, flx, fly = WorldToScreen(footL.x, footL.y, footL.z - 0.02)
+            local frOk, frx, fry = WorldToScreen(footR.x, footR.y, footR.z - 0.02)
 
             if not (hOk and flOk and frOk) then goto skip end
 
-            local fy = math.max(fly, fry)
+            local fy     = math.max(fly, fry)
             local height = fy - hy
             if height <= 0 then goto skip end
 
-            local rawLeft = math.min(flx, frx)
+            local rawLeft  = math.min(flx, frx)
             local rawRight = math.max(flx, frx)
             local rawWidth = rawRight - rawLeft
 
-            local width = rawWidth * 1.25
+            local width   = rawWidth * 1.25
             local centerX = (flx + frx) / 2
-            local left = centerX - width / 2
-            local right = centerX + width / 2
+            local left    = centerX - width / 2
+            local right   = centerX + width / 2
             local centerY = (hy + fy) / 2
 
             ----------------------------------------------------------------------
@@ -915,11 +916,11 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- TRACERS
+            -- TRACERS (2D overlay)
             ----------------------------------------------------------------------
             if esp_tracers then
-                local myOk, mx, my = World3dToScreen2d(myCoords.x, myCoords.y, myCoords.z - 0.9)
-                local tOk, tx, ty = World3dToScreen2d(coords.x, coords.y, coords.z - 0.9)
+                local myOk, mx, my = WorldToScreen(myCoords.x, myCoords.y, myCoords.z - 0.9)
+                local tOk, tx, ty  = WorldToScreen(coords.x,   coords.y,   coords.z   - 0.9)
                 if myOk and tOk then
                     DrawLine(mx, my, tx, ty, 255, 255, 255, 255)
                 end
@@ -956,8 +957,8 @@ Citizen.CreateThread(function()
                     local p1 = offsetTowardCam(GetPedBoneCoords(ped, b[1]))
                     local p2 = offsetTowardCam(GetPedBoneCoords(ped, b[2]))
 
-                    local ok1, x1, y1 = World3dToScreen2d(p1.x, p1.y, p1.z)
-                    local ok2, x2, y2 = World3dToScreen2d(p2.x, p2.y, p2.z)
+                    local ok1, x1, y1 = WorldToScreen(p1.x, p1.y, p1.z)
+                    local ok2, x2, y2 = WorldToScreen(p2.x, p2.y, p2.z)
 
                     if ok1 and ok2 then
                         DrawLine(x1, y1, x2, y2, 0, 255, 0, 255)
@@ -970,7 +971,6 @@ Citizen.CreateThread(function()
             ----------------------------------------------------------------------
             if esp_nametag then
                 local name = GetPlayerName(player) or "Unknown"
-                -- Adaptation possible selon la signature exacte de DrawText
                 DrawText(name, centerX, hy - 0.018, 0.22, 255, 255, 255, 255, true, true)
             end
 
@@ -986,7 +986,7 @@ Citizen.CreateThread(function()
             -- WEAPON
             ----------------------------------------------------------------------
             if esp_weapon then
-                local weapon = GetSelectedPedWeapon(ped)
+                local weapon     = GetSelectedPedWeapon(ped)
                 local weaponText = tostring(weapon)
                 DrawText(weaponText, centerX, hy - 0.038, 0.20, 255, 200, 100, 255, true, true)
             end
@@ -995,9 +995,10 @@ Citizen.CreateThread(function()
             -- HEALTH BAR
             ----------------------------------------------------------------------
             if esp_health then
-                local hp = GetEntityHealth(ped)
+                local hp    = GetEntityHealth(ped)
                 local maxHp = GetEntityMaxHealth(ped)
-                local pct = 0.0
+                local pct   = 0.0
+
                 if maxHp > 100 then
                     pct = math.max(0.0, math.min(1.0, (hp - 100) / (maxHp - 100)))
                 end
@@ -1020,7 +1021,7 @@ Citizen.CreateThread(function()
             ----------------------------------------------------------------------
             if esp_armor then
                 local armor = GetPedArmour(ped)
-                local pct = math.max(0.0, math.min(1.0, armor / 100.0))
+                local pct   = math.max(0.0, math.min(1.0, armor / 100.0))
 
                 local barH = height
                 local barW = 0.0035
@@ -1038,6 +1039,9 @@ Citizen.CreateThread(function()
             ::skip::
         end
 
+        SubmitFrame()
+
         ::continue::
     end
 end)
+
