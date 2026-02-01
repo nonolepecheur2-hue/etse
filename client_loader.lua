@@ -306,129 +306,102 @@ function DrawMenu()
     
     local currentY = y
     
-   if Banner.enabled then
-    if bannerTexture and bannerTexture > 0 then
-        
-        -- Calcul du ratio de l’image
-        local imgW = bannerWidth
-        local imgH = bannerHeight
-        local ratio = imgW / imgH
-
-        -- On veut une bannière large mais pas déformée
-        local drawH = Banner.height
-        local drawW = drawH * ratio
-
-        -- Si l’image dépasse la largeur du menu, on ajuste
-        if drawW > width then
-            drawW = width
-            drawH = drawW / ratio
+  if Banner.enabled then
+        if bannerTexture and bannerTexture > 0 then
+            Susano.DrawImage(bannerTexture, x, currentY, width, Banner.height, 1, 1, 1, 1, Style.bannerRounding)
+        else
+            Susano.DrawRectFilled(x, currentY, width, Banner.height, 
+                0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
+            
+            Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 
+                0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
+            
+            local titleWidth = Susano.GetTextWidth(Banner.text, Style.bannerTitleSize)
+            Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, 
+                Banner.text, Style.bannerTitleSize, 
+                Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0)
+            
+            local subWidth = Susano.GetTextWidth(Banner.subtitle, Style.bannerSubtitleSize)
+            Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, 
+                Banner.subtitle, Style.bannerSubtitleSize, 
+                Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
         end
-
-        -- Centrage horizontal
-        local drawX = x + (width - drawW) / 2
-
-        -- Dessin propre
-        Susano.DrawImage(bannerTexture, drawX, currentY, drawW, drawH, 1, 1, 1, 1, Style.bannerRounding)
-
-        currentY = currentY + drawH
-
-    else
-        -- fallback si l’image ne charge pas
-        Susano.DrawRectFilled(x, currentY, width, Banner.height, 
-            0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
         
-        Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 
-            0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
-        
-        local titleWidth = Susano.GetTextWidth(Banner.text, Style.bannerTitleSize)
-        Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, 
-            Banner.text, Style.bannerTitleSize, 
-            Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0)
-        
-        local subWidth = Susano.GetTextWidth(Banner.subtitle, Style.bannerSubtitleSize)
-        Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, 
-            Banner.subtitle, Style.bannerSubtitleSize, 
-            Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
-
         currentY = currentY + Banner.height
     end
-end
-
--- HEADER
-Susano.DrawRectFilled(x, currentY, width, Style.headerHeight,
-    Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], 
-    Style.headerRounding)
-
-local titleText = category.title:upper()
-Susano.DrawText(x + 15, currentY + 14, 
-    titleText, Style.titleSize, 
-    Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-Susano.DrawText(x + 15.3, currentY + 14, 
-    titleText, Style.titleSize, 
-    Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
-
-local versionText = "v1.0"
-local versionWidth = Susano.GetTextWidth(versionText, Style.footerSize)
-Susano.DrawText(x + width - versionWidth - 15, currentY + 17, 
-    versionText, Style.footerSize, 
-    Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
-
-currentY = currentY + Style.headerHeight
-
--- ITEMS
-local startY = currentY
-for i, item in ipairs(category.items) do
-    local itemY = startY + ((i - 1) * (height + spacing))
-    local isSelected = (i == Menu.selectedIndex)
     
-    if isSelected then
-        Susano.DrawRectFilled(x, itemY, width, height, 
-            Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], 
-            Style.itemRounding)
-    else
-        Susano.DrawRectFilled(x, itemY, width, height, 
-            Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4], 
-            Style.itemRounding)
-    end
+    Susano.DrawRectFilled(x, currentY, width, Style.headerHeight,
+        Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], 
+        Style.headerRounding)
     
-    local textX = x + 15
-    Susano.DrawText(textX, itemY + 12, 
-        item.label, Style.itemSize, 
+    local titleText = category.title:upper()
+    Susano.DrawText(x + 15, currentY + 14, 
+        titleText, Style.titleSize, 
         Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-    Susano.DrawText(textX + 0.3, itemY + 12, 
-        item.label, Style.itemSize, 
-        Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
+    Susano.DrawText(x + 15.3, currentY + 14, 
+        titleText, Style.titleSize, 
+        Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
     
-    if item.action == "category" and item.target then
-        local arrowX = x + width - 20
-        Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, 
+    local versionText = "v1.0"
+    local versionWidth = Susano.GetTextWidth(versionText, Style.footerSize)
+    Susano.DrawText(x + width - versionWidth - 15, currentY + 17, 
+        versionText, Style.footerSize, 
+        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
+    
+    currentY = currentY + Style.headerHeight
+    
+    local startY = currentY
+    for i, item in ipairs(category.items) do
+        local itemY = startY + ((i - 1) * (height + spacing))
+        local isSelected = (i == Menu.selectedIndex)
+        
+        if isSelected then
+            Susano.DrawRectFilled(x, itemY, width, height, 
+                Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], 
+                Style.itemRounding)
+        else
+            Susano.DrawRectFilled(x, itemY, width, height, 
+                Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4], 
+                Style.itemRounding)
+        end
+        
+        local textX = x + 15
+        Susano.DrawText(textX, itemY + 12, 
+            item.label, Style.itemSize, 
             Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-    else
-        local toggleStates = {
-            godmode = godmodeEnabled,
-            noclip = noclipEnabled,
-            sliderun = sliderunEnabled,
-            superjump = superjumpEnabled,
-            throwvehicle = throwvehicleEnabled,
-            superstrength = superstrengthEnabled,
+        Susano.DrawText(textX + 0.3, itemY + 12, 
+            item.label, Style.itemSize, 
+            Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
+        
+        if item.action == "category" and item.target then
+            local arrowX = x + width - 20
+            Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, 
+                Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
+        else
+            local toggleStates = {
+    godmode = godmodeEnabled,
+    noclip = noclipEnabled,
+    sliderun = sliderunEnabled,
+    superjump = superjumpEnabled,
+    throwvehicle = throwvehicleEnabled,
+    superstrength = superstrengthEnabled,
 
-            -- ESP toggles
-            esp_box = esp_box,
-            esp_outlines = esp_outlines,
-            esp_skeleton = esp_skeleton,
-            esp_chams = esp_chams,
-            esp_tracers = esp_tracers,
-            esp_health = esp_health,
-            esp_armor = esp_armor,
-            esp_nametag = esp_nametag,
-            esp_distance = esp_distance,
-            esp_weapon = esp_weapon,
-            esp_ignore_self = esp_ignore_self,
-            esp_friends = esp_friends,
-            esp_peds = esp_peds,
-            esp_invisible = esp_invisible
-        }
-
+    -- ESP toggles
+    esp_box = esp_box,
+    esp_outlines = esp_outlines,
+    esp_skeleton = esp_skeleton,
+    esp_chams = esp_chams,
+    esp_tracers = esp_tracers,
+    esp_health = esp_health,
+    esp_armor = esp_armor,
+    esp_nametag = esp_nametag,
+    esp_distance = esp_distance,
+    esp_weapon = esp_weapon,
+    esp_ignore_self = esp_ignore_self,
+    esp_friends = esp_friends,
+    esp_peds = esp_peds,
+    esp_invisible = esp_invisible
+}
 
         
         local sliderActions = {"noclip", "sliderun"}
