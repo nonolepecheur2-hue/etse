@@ -391,7 +391,7 @@ function DrawMenu()
     superjump = superjumpEnabled,
     throwvehicle = throwvehicleEnabled,
     superstrength = superstrengthEnabled,
-    Invisible = invisibleEnabled
+    Invisible = invisibleEnabled,
 
     -- ESP toggles
     esp_box = esp_box,
