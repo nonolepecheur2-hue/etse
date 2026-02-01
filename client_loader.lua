@@ -831,9 +831,6 @@ Citizen.CreateThread(function()
         local myServerId = GetPlayerServerId(PlayerId())
         local camCoords  = GetGameplayCamCoord()
 
-        -- Frame Susano
-        BeginFrame()
-
         for _, player in ipairs(GetActivePlayers()) do
             local ped = GetPlayerPed(player)
             if ped == 0 or not DoesEntityExist(ped) then goto skip end
@@ -852,15 +849,15 @@ Citizen.CreateThread(function()
             if dist > 300.0 then goto skip end
 
             ----------------------------------------------------------------------
-            -- PROJECTION 2D : TÊTE + PIED GAUCHE + PIED DROIT
+            -- PROJECTION 2D
             ----------------------------------------------------------------------
             local head  = GetPedBoneCoords(ped, 31086)
             local footL = GetPedBoneCoords(ped, 14201)
             local footR = GetPedBoneCoords(ped, 52301)
 
-            local hOk, hx, hy   = WorldToScreen(head.x,  head.y,  head.z  + 0.18)
-            local flOk, flx, fly = WorldToScreen(footL.x, footL.y, footL.z - 0.02)
-            local frOk, frx, fry = WorldToScreen(footR.x, footR.y, footR.z - 0.02)
+            local hOk, hx, hy   = World3dToScreen2d(head.x,  head.y,  head.z  + 0.18)
+            local flOk, flx, fly = World3dToScreen2d(footL.x, footL.y, footL.z - 0.02)
+            local frOk, frx, fry = World3dToScreen2d(footR.x, footR.y, footR.z - 0.02)
 
             if not (hOk and flOk and frOk) then goto skip end
 
@@ -879,86 +876,72 @@ Citizen.CreateThread(function()
             local centerY = (hy + fy) / 2
 
             ----------------------------------------------------------------------
-            -- CHAMS (halo 2D)
+            -- CHAMS
             ----------------------------------------------------------------------
             if esp_chams then
-                DrawRectFilled(centerX, centerY, width, height, 0, 150, 255, 60)
+                DrawRectFilled(centerX, centerY, width, height, 0, 150, 255, 80)
             end
 
             ----------------------------------------------------------------------
-            -- BOX (style image B)
+            -- BOX
             ----------------------------------------------------------------------
             if esp_box then
-                -- Fond léger
-                DrawRectFilled(centerX, centerY, width, height, 0, 0, 0, 90)
+                DrawRectFilled(centerX, centerY, width, height, 0, 0, 0, 120)
 
-                local thickness = 0.0015
-
-                -- Haut / Bas
-                DrawRectFilled(centerX, hy, width, thickness, 255, 255, 255, 255)
-                DrawRectFilled(centerX, fy, width, thickness, 255, 255, 255, 255)
-
-                -- Gauche / Droite
-                DrawRectFilled(left, centerY, thickness, height, 255, 255, 255, 255)
-                DrawRectFilled(right, centerY, thickness, height, 255, 255, 255, 255)
+                local t = 0.0015
+                DrawRectFilled(centerX, hy, width, t, 255, 255, 255, 255)
+                DrawRectFilled(centerX, fy, width, t, 255, 255, 255, 255)
+                DrawRectFilled(left, centerY, t, height, 255, 255, 255, 255)
+                DrawRectFilled(right, centerY, t, height, 255, 255, 255, 255)
             end
 
             ----------------------------------------------------------------------
-            -- OUTLINES (contour noir derrière la box)
+            -- OUTLINES
             ----------------------------------------------------------------------
             if esp_outlines then
-                local thickness = 0.0025
-
-                DrawRectFilled(centerX, hy, width, thickness, 0, 0, 0, 255)
-                DrawRectFilled(centerX, fy, width, thickness, 0, 0, 0, 255)
-                DrawRectFilled(left, centerY, thickness, height, 0, 0, 0, 255)
-                DrawRectFilled(right, centerY, thickness, height, 0, 0, 0, 255)
+                local t = 0.0025
+                DrawRectFilled(centerX, hy, width, t, 0, 0, 0, 255)
+                DrawRectFilled(centerX, fy, width, t, 0, 0, 0, 255)
+                DrawRectFilled(left, centerY, t, height, 0, 0, 0, 255)
+                DrawRectFilled(right, centerY, t, height, 0, 0, 0, 255)
             end
 
             ----------------------------------------------------------------------
-            -- TRACERS (2D overlay)
+            -- TRACERS (2D)
             ----------------------------------------------------------------------
             if esp_tracers then
-                local myOk, mx, my = WorldToScreen(myCoords.x, myCoords.y, myCoords.z - 0.9)
-                local tOk, tx, ty  = WorldToScreen(coords.x,   coords.y,   coords.z   - 0.9)
-                if myOk and tOk then
+                local ok1, mx, my = World3dToScreen2d(myCoords.x, myCoords.y, myCoords.z - 0.9)
+                local ok2, tx, ty = World3dToScreen2d(coords.x, coords.y, coords.z - 0.9)
+                if ok1 and ok2 then
                     DrawLine(mx, my, tx, ty, 255, 255, 255, 255)
                 end
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (2D overlay, décalé vers la cam)
+            -- SKELETON (2D overlay)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
-                    -- Head / Neck / Spine
                     {31086, 39317}, {39317, 24816}, {24816, 24817}, {24817, 0},
-                    -- Left arm
                     {39317, 18905}, {18905, 57005},
-                    -- Right arm
                     {39317, 28252}, {28252, 61163},
-                    -- Left leg
                     {0, 14201}, {14201, 65245}, {65245, 55120},
-                    -- Right leg
                     {0, 51826}, {51826, 36864}, {36864, 52301}
                 }
 
-                local function offsetTowardCam(pos)
-                    local dir = vector3(pos.x - camCoords.x, pos.y - camCoords.y, pos.z - camCoords.z)
+                local function offset(pos)
+                    local dir = pos - camCoords
                     local len = #(dir)
-                    if len > 0.0 then
-                        dir = dir / len
-                        return vector3(pos.x + dir.x * 0.03, pos.y + dir.y * 0.03, pos.z + dir.z * 0.03)
-                    end
-                    return pos
+                    if len > 0 then dir = dir / len end
+                    return pos + dir * 0.03
                 end
 
                 for _, b in ipairs(bones) do
-                    local p1 = offsetTowardCam(GetPedBoneCoords(ped, b[1]))
-                    local p2 = offsetTowardCam(GetPedBoneCoords(ped, b[2]))
+                    local p1 = offset(GetPedBoneCoords(ped, b[1]))
+                    local p2 = offset(GetPedBoneCoords(ped, b[2]))
 
-                    local ok1, x1, y1 = WorldToScreen(p1.x, p1.y, p1.z)
-                    local ok2, x2, y2 = WorldToScreen(p2.x, p2.y, p2.z)
+                    local ok1, x1, y1 = World3dToScreen2d(p1.x, p1.y, p1.z)
+                    local ok2, x2, y2 = World3dToScreen2d(p2.x, p2.y, p2.z)
 
                     if ok1 and ok2 then
                         DrawLine(x1, y1, x2, y2, 0, 255, 0, 255)
@@ -970,25 +953,21 @@ Citizen.CreateThread(function()
             -- NAMETAG
             ----------------------------------------------------------------------
             if esp_nametag then
-                local name = GetPlayerName(player) or "Unknown"
-                DrawText(name, centerX, hy - 0.018, 0.22, 255, 255, 255, 255, true, true)
+                DrawText(GetPlayerName(player), centerX, hy - 0.018, 0.22, 255, 255, 255, 255, true, true)
             end
 
             ----------------------------------------------------------------------
             -- DISTANCE
             ----------------------------------------------------------------------
             if esp_distance then
-                local distText = string.format("%.1f m", dist)
-                DrawText(distText, centerX, fy + 0.020, 0.20, 200, 200, 200, 255, true, true)
+                DrawText(string.format("%.1f m", dist), centerX, fy + 0.020, 0.20, 200, 200, 200, 255, true, true)
             end
 
             ----------------------------------------------------------------------
             -- WEAPON
             ----------------------------------------------------------------------
             if esp_weapon then
-                local weapon     = GetSelectedPedWeapon(ped)
-                local weaponText = tostring(weapon)
-                DrawText(weaponText, centerX, hy - 0.038, 0.20, 255, 200, 100, 255, true, true)
+                DrawText(tostring(GetSelectedPedWeapon(ped)), centerX, hy - 0.038, 0.20, 255, 200, 100, 255, true, true)
             end
 
             ----------------------------------------------------------------------
@@ -997,19 +976,13 @@ Citizen.CreateThread(function()
             if esp_health then
                 local hp    = GetEntityHealth(ped)
                 local maxHp = GetEntityMaxHealth(ped)
-                local pct   = 0.0
-
-                if maxHp > 100 then
-                    pct = math.max(0.0, math.min(1.0, (hp - 100) / (maxHp - 100)))
-                end
+                local pct   = math.max(0.0, math.min(1.0, (hp - 100) / (maxHp - 100)))
 
                 local barH = height
                 local barW = 0.0035
 
-                -- Fond
                 DrawRectFilled(left - 0.010, centerY, barW, barH, 0, 0, 0, 180)
 
-                -- Remplissage
                 local fillH = barH * pct
                 local fillY = fy - fillH / 2
 
@@ -1026,10 +999,8 @@ Citizen.CreateThread(function()
                 local barH = height
                 local barW = 0.0035
 
-                -- Fond
                 DrawRectFilled(right + 0.010, centerY, barW, barH, 0, 0, 0, 180)
 
-                -- Remplissage
                 local fillH = barH * pct
                 local fillY = fy - fillH / 2
 
@@ -1038,8 +1009,6 @@ Citizen.CreateThread(function()
 
             ::skip::
         end
-
-        SubmitFrame()
 
         ::continue::
     end
