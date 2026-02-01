@@ -806,49 +806,55 @@ Citizen.CreateThread(function()
                         end
 
                         ----------------------------------------------------------------------
-                        -- OUTLINES (placeholder)
-                        ----------------------------------------------------------------------
-                        if esp_outlines then
-                            -- Non implémenté
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- SKELETON ESP (COMPLET ET FONCTIONNEL)
+                        -- SKELETON ESP (FIXED)
                         ----------------------------------------------------------------------
                         if esp_skeleton then
                             local bones = {
-                                {0x796E, 0x322C}, -- Head → Neck
-                                {0x322C, 0xE0FD}, -- Neck → Spine
-                                {0xE0FD, 0x5C01}, -- Spine → Pelvis
+                                -- Head and Neck
+                                {31086, 11816},  -- Head to Neck
+                                {11816, 1},      -- Neck to Spine 2
+                                {1, 0},          -- Spine 2 to Pelvis
 
-                                {0x322C, 0x9995}, -- Left Upper Arm
-                                {0x9995, 0xB1C5}, -- Left Forearm
-                                {0xB1C5, 0xEEEB}, -- Left Hand
+                                -- Left Arm
+                                {11816, 13612},  -- Neck to Left Shoulder
+                                {13612, 33391},  -- Left Shoulder to Left Elbow
+                                {33391, 57005},  -- Left Elbow to Left Wrist
+                                {57005, 58271},  -- Left Wrist to Left Hand
 
-                                {0x322C, 0x9D4D}, -- Right Upper Arm
-                                {0x9D4D, 0x6E5C}, -- Right Forearm
-                                {0x6E5C, 0xDEAD}, -- Right Hand
+                                -- Right Arm
+                                {11816, 24818},  -- Neck to Right Shoulder
+                                {24818, 25457},  -- Right Shoulder to Right Elbow
+                                {25457, 61163},  -- Right Elbow to Right Wrist
+                                {61163, 36029},  -- Right Wrist to Right Hand
 
-                                {0x5C01, 0xF9BB}, -- Left Thigh
-                                {0xF9BB, 0x3779}, -- Left Calf
-                                {0x3779, 0x83C0}, -- Left Foot
+                                -- Left Leg
+                                {0, 63931},      -- Pelvis to Left Hip
+                                {63931, 6442},   -- Left Hip to Left Knee
+                                {6442, 2961},    -- Left Knee to Left Ankle
+                                {2961, 14201},   -- Left Ankle to Left Foot
 
-                                {0x5C01, 0xCA72}, -- Right Thigh
-                                {0xCA72, 0x9000}, -- Right Calf
-                                {0x9000, 0xCC4D}, -- Right Foot
+                                -- Right Leg
+                                {0, 65245},      -- Pelvis to Right Hip
+                                {65245, 40269},  -- Right Hip to Right Knee
+                                {40269, 37388},  -- Right Knee to Right Ankle
+                                {37388, 51826},  -- Right Ankle to Right Foot
+
+                                -- Spine
+                                {11816, 23553},  -- Neck to Spine 1
+                                {23553, 24817},  -- Spine 1 to Spine 3
                             }
 
                             for _, pair in ipairs(bones) do
-                                local b1 = GetPedBoneCoords(ped, pair[1])
-                                local b2 = GetPedBoneCoords(ped, pair[2])
+                                local bone1 = GetPedBoneCoords(ped, pair[1])
+                                local bone2 = GetPedBoneCoords(ped, pair[2])
 
-                                SetDrawOrigin(0.0, 0.0, 0.0, 0)    
-
-                                DrawLine(
-                                    b1.x, b1.y, b1.z,
-                                    b2.x, b2.y, b2.z,
-                                    255, 255, 255, 255
-                                )
+                                if bone1 and bone2 then
+                                    DrawLine(
+                                        bone1.x, bone1.y, bone1.z,
+                                        bone2.x, bone2.y, bone2.z,
+                                        0, 255, 0, 255
+                                    )
+                                end
                             end
                         end
 
