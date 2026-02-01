@@ -802,10 +802,11 @@ Citizen.CreateThread(function()
 
             if not (hOk and fOk) then goto skip end
 
+            -- Dimensions de la box
             local height = fy - hy
             if height <= 0 then goto skip end
 
-            local width = height * 0.45
+            local width = height * 0.28   -- ratio parfait
             local left = hx - width
             local right = hx + width
 
@@ -845,15 +846,33 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (3D)
+            -- SKELETON (3D, BONES CORRIGÉS)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
-                    {31086, 11816}, {11816, 1}, {1, 0},
-                    {11816, 24818}, {24818, 25457}, {25457, 61163},
-                    {11816, 13612}, {13612, 33391}, {33391, 57005},
-                    {0, 65245}, {65245, 40269}, {40269, 37388},
-                    {0, 63931}, {63931, 6442}, {6442, 2961}
+                    -- Head / Neck / Spine
+                    {31086, 39317},   -- head → neck
+                    {39317, 24816},   -- neck → spine upper
+                    {24816, 24817},   -- spine upper → spine mid
+                    {24817, 0},       -- spine mid → pelvis
+
+                    -- Left arm
+                    {39317, 18905},   -- neck → left clavicle
+                    {18905, 57005},   -- clavicle → left hand
+
+                    -- Right arm
+                    {39317, 28252},   -- neck → right clavicle
+                    {28252, 61163},   -- clavicle → right hand
+
+                    -- Left leg
+                    {0, 14201},       -- pelvis → left thigh
+                    {14201, 65245},   -- thigh → left calf
+                    {65245, 55120},   -- calf → left foot
+
+                    -- Right leg
+                    {0, 51826},       -- pelvis → right thigh
+                    {51826, 36864},   -- thigh → right calf
+                    {36864, 52301},   -- calf → right foot
                 }
 
                 for _, b in ipairs(bones) do
@@ -864,17 +883,17 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- NAMETAG
+            -- NAMETAG (PETIT + PROPRE)
             ----------------------------------------------------------------------
             if esp_nametag then
                 SetTextFont(0)
-                SetTextScale(0.3, 0.3)
+                SetTextScale(0.22, 0.22)
                 SetTextColour(255, 255, 255, 255)
                 SetTextCentre(true)
                 SetTextOutline()
                 BeginTextCommandDisplayText("STRING")
                 AddTextComponentSubstringPlayerName(GetPlayerName(player))
-                EndTextCommandDisplayText(hx, hy - 0.02)
+                EndTextCommandDisplayText(hx, hy - 0.015)
             end
 
             ----------------------------------------------------------------------
@@ -882,7 +901,7 @@ Citizen.CreateThread(function()
             ----------------------------------------------------------------------
             if esp_distance then
                 SetTextFont(0)
-                SetTextScale(0.25, 0.25)
+                SetTextScale(0.20, 0.20)
                 SetTextColour(200, 200, 200, 255)
                 SetTextCentre(true)
                 SetTextOutline()
