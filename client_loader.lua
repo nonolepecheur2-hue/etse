@@ -558,29 +558,31 @@ Citizen.CreateThread(function()
     local lastBackPress = false
     local lastLeftPress = false
     local lastRightPress = false
-    
+
     while true do
         Citizen.Wait(0)
-        
+
+        ----------------------------------------------------------------------
         -- OUVERTURE / FERMETURE MENU
+        ----------------------------------------------------------------------
         local _, f5Pressed = Susano.GetAsyncKeyState(VK_F5)
         if f5Pressed and not lastF5Press then
             Menu.isOpen = not Menu.isOpen
             if Menu.isOpen then
                 Menu.currentCategory = "main"
                 Menu.selectedIndex = 1
-                print("^2Menu opened^0")
             else
                 Susano.ResetFrame()
-                print("^1Menu closed^0")
             end
         end
         lastF5Press = f5Pressed
-        
+
+        ----------------------------------------------------------------------
         -- NAVIGATION MENU
+        ----------------------------------------------------------------------
         if Menu.isOpen then
             local category = categories[Menu.currentCategory]
-            
+
             local _, upPressed = Susano.GetAsyncKeyState(VK_UP)
             if upPressed and not lastUpPress then
                 Menu.selectedIndex = Menu.selectedIndex - 1
@@ -589,7 +591,7 @@ Citizen.CreateThread(function()
                 end
             end
             lastUpPress = upPressed
-            
+
             local _, downPressed = Susano.GetAsyncKeyState(VK_DOWN)
             if downPressed and not lastDownPress then
                 Menu.selectedIndex = Menu.selectedIndex + 1
@@ -598,38 +600,30 @@ Citizen.CreateThread(function()
                 end
             end
             lastDownPress = downPressed
-            
+
             local _, leftPressed = Susano.GetAsyncKeyState(VK_LEFT)
             local _, rightPressed = Susano.GetAsyncKeyState(VK_RIGHT)
-            
+
             if (leftPressed and not lastLeftPress) or (rightPressed and not lastRightPress) then
                 local item = category.items[Menu.selectedIndex]
                 if item then
                     if item.action == "noclip" then
-                        if leftPressed then
-                            noclipSpeed = math.max(0.5, noclipSpeed - 0.5)
-                        else
-                            noclipSpeed = math.min(10.0, noclipSpeed + 0.5)
-                        end
+                        if leftPressed then noclipSpeed = math.max(0.5, noclipSpeed - 0.5)
+                        else noclipSpeed = math.min(10.0, noclipSpeed + 0.5) end
+
                     elseif item.action == "sliderun" then
-                        if leftPressed then
-                            sliderunSpeed = math.max(1.0, sliderunSpeed - 1.0)
-                        else
-                            sliderunSpeed = math.min(20.0, sliderunSpeed + 1.0)
-                        end
+                        if leftPressed then sliderunSpeed = math.max(1.0, sliderunSpeed - 1.0)
+                        else sliderunSpeed = math.min(20.0, sliderunSpeed + 1.0) end
                     end
                 end
             end
             lastLeftPress = leftPressed
             lastRightPress = rightPressed
-            
+
             local _, backPressed = Susano.GetAsyncKeyState(VK_BACK)
             if backPressed and not lastBackPress then
                 if Menu.currentCategory ~= "main" then
                     Menu.categoryIndexes[Menu.currentCategory] = Menu.selectedIndex
-                    Menu.transitionDirection = -1
-                    Menu.transitionOffset = 50
-                    
                     if #Menu.categoryHistory > 0 then
                         Menu.currentCategory = table.remove(Menu.categoryHistory)
                         Menu.selectedIndex = Menu.categoryIndexes[Menu.currentCategory] or 1
@@ -640,11 +634,10 @@ Citizen.CreateThread(function()
                 else
                     Menu.isOpen = false
                     Susano.ResetFrame()
-                    print("^1Menu closed^0")
                 end
             end
             lastBackPress = backPressed
-            
+
             local _, enterPressed = Susano.GetAsyncKeyState(VK_RETURN)
             if enterPressed and not lastEnterPress then
                 local item = category.items[Menu.selectedIndex]
@@ -656,11 +649,13 @@ Citizen.CreateThread(function()
                 end
             end
             lastEnterPress = enterPressed
-            
+
             DrawMenu()
         end
-        
+
+        ----------------------------------------------------------------------
         -- NOCLIP
+        ----------------------------------------------------------------------
         if noclipEnabled then
             local ped = PlayerPedId()
             local entity = ped
@@ -668,15 +663,15 @@ Citizen.CreateThread(function()
             if inVehicle then entity = GetVehiclePedIsIn(ped, false) end
 
             SetEntityCollision(entity, false, false)
-            if inVehicle then FreezeEntityPosition(entity, true) else FreezeEntityPosition(ped, true) end
+            FreezeEntityPosition(entity, true)
             SetEntityInvincible(ped, true)
 
-            local pos = GetEntityCoords(entity, false)
+            local pos = GetEntityCoords(entity)
             local camRot = GetGameplayCamRot(2)
             local pitch = math.rad(camRot.x)
             local yaw = math.rad(camRot.z)
             local forward = { x = -math.sin(yaw) * math.cos(pitch), y = math.cos(yaw) * math.cos(pitch), z = math.sin(pitch) }
-            local right   = { x = math.cos(yaw), y = math.sin(yaw), z = 0.0 }
+            local right = { x = math.cos(yaw), y = math.sin(yaw), z = 0.0 }
 
             local speed = noclipSpeed
             if IsControlPressed(0, 21) then speed = speed * 3.0 end
@@ -689,20 +684,11 @@ Citizen.CreateThread(function()
             if IsControlPressed(0, 36) then pos = pos - vector3(0, 0, speed) end
 
             SetEntityCoordsNoOffset(entity, pos.x, pos.y, pos.z, true, true, true)
-            if inVehicle then SetEntityVelocity(entity, 0.0, 0.0, 0.0) end
-        else
-            local ped = PlayerPedId()
-            if IsPedInAnyVehicle(ped, false) then
-                local veh = GetVehiclePedIsIn(ped, false)
-                SetEntityCollision(veh, true, true)
-                FreezeEntityPosition(veh, false)
-            end
-            if not godmodeEnabled then SetEntityInvincible(ped, false) end
-            SetEntityCollision(ped, true, true)
-            FreezeEntityPosition(ped, false)
         end
 
+        ----------------------------------------------------------------------
         -- GODMODE
+        ----------------------------------------------------------------------
         if godmodeEnabled then
             local ped = PlayerPedId()
             SetEntityInvincible(ped, true)
@@ -710,16 +696,19 @@ Citizen.CreateThread(function()
             local maxHealth = GetEntityMaxHealth(ped)
             if health < maxHealth then SetEntityHealth(ped, maxHealth) end
             SetPedCanRagdoll(ped, false)
-            SetPedCanBeKnockedOffVehicle(ped, 1)
         end
-        
+
+        ----------------------------------------------------------------------
         -- SUPERJUMP
+        ----------------------------------------------------------------------
         if superjumpEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) then SetSuperJumpThisFrame(PlayerId()) end
         end
-        
+
+        ----------------------------------------------------------------------
         -- SLIDERUN
+        ----------------------------------------------------------------------
         if sliderunEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) and not IsPedInAnyVehicle(ped, false) then
@@ -734,28 +723,32 @@ Citizen.CreateThread(function()
             end
         end
 
-        -- INVISIBLE (CORRECTEMENT PLACÉ)
+        ----------------------------------------------------------------------
+        -- INVISIBLE (LOCAL + RÉSEAU AVEC SUSANO)
+        ----------------------------------------------------------------------
         if invisibleEnabled then
             local ped = PlayerPedId()
+
+            -- Invisible pour toi
             SetEntityVisible(ped, false, false)
             SetEntityAlpha(ped, 0, false)
-            SetPedCanBeTargetted(ped, false)
-            SetPedCanRagdoll(ped, false)
-            SetEntityCollision(ped, false, false)
-            SetPedConfigFlag(ped, 52, true)
+
+            -- Invisible pour les autres (API Susano)
+            Susano.SetNetworkInvisible(true)
+
         else
             local ped = PlayerPedId()
+
+            -- Visible pour toi
             SetEntityVisible(ped, true, false)
             SetEntityAlpha(ped, 255, false)
-            SetPedCanBeTargetted(ped, true)
-            SetPedCanRagdoll(ped, true)
-            SetEntityCollision(ped, true, true)
-            SetPedConfigFlag(ped, 52, false)
+
+            -- Visible pour les autres
+            Susano.SetNetworkInvisible(false)
         end
 
-    end -- FIN DU WHILE
-end) -- FIN DU THREAD
-
+    end
+end)
 
 Citizen.CreateThread(function()
     Wait(1000)
