@@ -149,7 +149,7 @@ local superstrengthEnabled = false
 
 local Banner = {
     enabled = true,
-    imagePath = "https://wallpaper.dog/large/10908.jpg",
+    imagePath = "https://cdn.discordapp.com/attachments/1364291522237042732/1467469384787300395/content.png?ex=69807edd&is=697f2d5d&hm=1ab557fee66002a1407a2c67979aa24de91b3dbadfa28c78cfe6c5b0000f5e34&",
     text = "DNB",
     subtitle = "Premium Edition",
     height = 120
