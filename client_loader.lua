@@ -882,39 +882,46 @@ Citizen.CreateThread(function()
             ----------------------------------------------------------------------
             -- SKELETON 3D CORRIGÉ (offset vers la caméra)
             ----------------------------------------------------------------------
-            if esp_skeleton then
+             if esp_skeleton then
                 local bones = {
-                    -- Spine / Head
-                    {0, 24817}, {24817, 24816}, {24816, 39317}, {39317, 31086},
-                    -- Left arm
-                    {39317, 18905}, {18905, 57005},
-                    -- Right arm
-                    {39317, 28252}, {28252, 61163},
-                    -- Left leg
-                    {0, 14201}, {14201, 65245}, {65245, 55120},
-                    -- Right leg
-                    {0, 51826}, {51826, 36864}, {36864, 52301}
-                }
+                -- Spine / Head
+                {0, 24817}, {24817, 24816}, {24816, 39317}, {39317, 31086},
+                -- Left arm
+                {39317, 18905}, {18905, 57005},
+                -- Right arm
+                {39317, 28252}, {28252, 61163},
+                -- Left leg
+                {0, 14201}, {14201, 65245}, {65245, 55120},
+                -- Right leg
+                {0, 51826}, {51826, 36864}, {36864, 52301}
+              }
 
-                local function offsetTowardCam(pos)
-                    -- vecteur de l’os vers la caméra
-                    local dir = vector3(camCoords.x - pos.x, camCoords.y - pos.y, camCoords.z - pos.z)
-                    local len = #(dir)
-                    if len > 0.0 then
-                        dir = dir / len
-                        local offset = 0.03 -- ~3 cm vers la caméra
-                        return vector3(pos.x + dir.x * offset, pos.y + dir.y * offset, pos.z + dir.z * offset)
-                    end
-                    return pos
-                end
+              local function offsetTowardCam(pos)
+                -- vecteur de l'os vers la caméra
+                local dir = vector3(camCoords.x - pos.x, camCoords.y - pos.y, camCoords.z - pos.z)
+                local len = #(dir)
+                if len > 0.0 then
+                  dir = dir / len
+                  local offset = 0.03 -- ~3 cm vers la caméra
+                  return vector3(pos.x + dir.x * offset, pos.y + dir.y * offset, pos.z + dir.z * offset)
+               end
+               return pos
+             end
 
-                for _, b in ipairs(bones) do
-                    local p1 = offsetTowardCam(GetPedBoneCoords(ped, b[1]))
-                    local p2 = offsetTowardCam(GetPedBoneCoords(ped, b[2]))
-                    DrawLine(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, 0, 255, 0, 255)
-                end
+             -- Disable depth testing to see through objects
+             SetDrawOrigin(0.0, 0.0, 0.0, 0)
+  
+             for _, b in ipairs(bones) do
+               local p1 = offsetTowardCam(GetPedBoneCoords(ped, b[1]))
+               local p2 = offsetTowardCam(GetPedBoneCoords(ped, b[2]))
+    
+               -- Draw with reduced alpha for better visibility through walls
+               DrawLine(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, 0, 255, 0, 255)
+             end
+  
+             -- Reset draw origin
+             ClearDrawOrigin()
             end
-
             ----------------------------------------------------------------------
             -- NAMETAG
             ----------------------------------------------------------------------
