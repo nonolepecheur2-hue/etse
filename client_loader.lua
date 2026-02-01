@@ -48,7 +48,9 @@ local categories = {
         items = {
             {label = "Noclip", action = "noclip"},
             {label = "Slide Run", action = "sliderun"},
-            {label = "Super Jump", action = "superjump"}
+            {label = "Super Jump", action = "superjump"},
+            {label = "Infinite Stamina", action = "infinite_stamina"}
+
         }
     },
 
@@ -148,6 +150,7 @@ local sliderunSpeed = 5.0
 local superjumpEnabled = false
 local throwvehicleEnabled = false
 local superstrengthEnabled = false
+local infiniteStaminaEnabled = false
 
 local Banner = {
     enabled = true,
@@ -271,6 +274,11 @@ local actions = {
     superstrength = function()
         superstrengthEnabled = not superstrengthEnabled
         print(superstrengthEnabled and "^2✓ Super Strength enabled^0" or "^1✗ Super Strength disabled^0")
+    end,
+
+    infinite_stamina = function()
+        infiniteStaminaEnabled = not infiniteStaminaEnabled
+        print(infiniteStaminaEnabled and "^2✓ Infinite Stamina enabled^0" or "^1✗ Infinite Stamina disabled^0")
     end,
 
     -- ESP actions
@@ -450,7 +458,9 @@ function DrawMenu()
     esp_ignore_self = esp_ignore_self,
     esp_friends = esp_friends,
     esp_peds = esp_peds,
-    esp_invisible = esp_invisible
+    esp_invisible = esp_invisible,
+    infinite_stamina = infiniteStaminaEnabled
+
 }
 
         
@@ -778,7 +788,14 @@ Citizen.CreateThread(function()
             SetPedCanRagdoll(ped, false)
             SetPedCanBeKnockedOffVehicle(ped, 1)
         end
-        
+
+        if infiniteStaminaEnabled then
+            local ped = PlayerPedId()
+            if IsPedOnFoot(ped) and not IsPedInAnyVehicle(ped, false) then
+                RestorePlayerStamina(PlayerId(), 1.0)
+            end
+        end
+
         if superjumpEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) then
