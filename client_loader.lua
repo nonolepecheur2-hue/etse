@@ -149,11 +149,13 @@ local superstrengthEnabled = false
 
 local Banner = {
     enabled = true,
-    imagePath = "https://cdn.discordapp.com/attachments/1364291522237042732/1467469384787300395/content.png?ex=69807edd&is=697f2d5d&hm=1ab557fee66002a1407a2c67979aa24de91b3dbadfa28c78cfe6c5b0000f5e34&",
-    text = "DNB",
-    subtitle = "Premium Edition",
-    height = 120
+    imagePath = "https://media.istockphoto.com/id/1187144081/fr/vectoriel/mod%C3%A8le-de-banni%C3%A8re-vectorielle-vip-seulement.jpg?s=170667a&w=0&k=20&c=dM7QTaqF-doGR1P8_gBeEj9EzeQCOtbWC0E6cg-A6TY=",
+    text = "",
+    subtitle = "",
+    height = 160
 }
+
+
 
 local bannerTexture = nil
 local bannerWidth = 0
@@ -162,43 +164,49 @@ local bannerHeight = 0
 local Style = {
     x = 70,
     y = 100,
-    width = 350,
-    height = 42,
-    itemSpacing = 0,
-    
-    bgColor = {0.12, 0.12, 0.12, 0.75},
-    headerColor = {0.0, 0.0, 0.0, 1.0},
-    selectedColor = {0.55, 0.0, 0.0, 0.95},
-    itemColor = {0.18, 0.18, 0.18, 0.7},
-    itemHoverColor = {0.22, 0.22, 0.22, 0.75},
-    accentColor = {0.65, 0.0, 0.0, 1.0},
-    textColor = {1.0, 1.0, 1.0, 1.0},
-    textSecondary = {0.7, 0.7, 0.7, 1.0},
-    separatorColor = {0.3, 0.3, 0.3, 0.6},
-    footerColor = {0.0, 0.0, 0.0, 1.0},
-    scrollbarBg = {0.15, 0.15, 0.15, 0.8},
-    scrollbarThumb = {0.65, 0.0, 0.0, 0.95},
-    
-    titleSize = 18,
-    subtitleSize = 15,
-    itemSize = 16,
-    infoSize = 13,
-    footerSize = 13,
-    bannerTitleSize = 28,
-    bannerSubtitleSize = 16,
-    
-    headerHeight = 45,
-    footerHeight = 32,
-    
-    headerRounding = 0.0,
-    itemRounding = 0.0,
-    footerRounding = 8.0,
-    bannerRounding = 0.0,
+    width = 380,
+    height = 48,
+    itemSpacing = 4,
+
+    -- COULEURS VIP
+    bgColor = {0.05, 0.05, 0.05, 0.90},        -- Fond sombre
+    headerColor = {0.08, 0.08, 0.08, 1.0},     -- Bandeau noir
+    selectedColor = {0.90, 0.75, 0.20, 0.95},  -- OR premium
+    itemColor = {0.12, 0.12, 0.12, 0.85},      -- Fond item
+    itemHoverColor = {0.18, 0.18, 0.18, 0.90}, -- Hover
+    accentColor = {0.95, 0.80, 0.25, 1.0},     -- OR vif
+    textColor = {1.0, 1.0, 1.0, 1.0},          -- Blanc pur
+    textSecondary = {0.85, 0.85, 0.85, 0.9},   -- Gris clair
+    separatorColor = {0.4, 0.4, 0.4, 0.5},
+    footerColor = {0.08, 0.08, 0.08, 1.0},
+
+    scrollbarBg = {0.10, 0.10, 0.10, 0.8},
+    scrollbarThumb = {0.95, 0.80, 0.25, 0.95}, -- OR
+
+    -- TAILLES
+    titleSize = 22,
+    subtitleSize = 16,
+    itemSize = 18,
+    infoSize = 14,
+    footerSize = 14,
+    bannerTitleSize = 32,
+    bannerSubtitleSize = 18,
+
+    -- DIMENSIONS
+    headerHeight = 55,
+    footerHeight = 36,
+
+    -- ARRONDIS
+    headerRounding = 6.0,
+    itemRounding = 6.0,
+    footerRounding = 6.0,
+    bannerRounding = 6.0,
     globalRounding = 8.0,
-    
-    scrollbarWidth = 6,
-    scrollbarPadding = 8
+
+    scrollbarWidth = 8,
+    scrollbarPadding = 10
 }
+
 
 -- Actions (avec ESP ajoutés)
 local actions = {
