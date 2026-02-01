@@ -469,7 +469,7 @@ function DrawMenu()
     esp_peds = esp_peds,
     esp_invisible = esp_invisible,
     infinite_stamina = infiniteStaminaEnabled,
-    explosive-melee = explosiveMeleeEnabled
+    explosive_melee = explosiveMeleeEnabled
                 
 
 }
