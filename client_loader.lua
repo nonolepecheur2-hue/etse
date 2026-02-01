@@ -54,7 +54,8 @@ local categories = {
         title = "Player - Other",
         items = {
             {label = "Throw From Vehicle", action = "throwvehicle"},
-            {label = "Super Strength", action = "superstrength"}
+            {label = "Super Strength", action = "superstrength"},
+            {label = "Invisible", action = "Invisible"}
         }
     },
 
@@ -271,6 +272,11 @@ local actions = {
         print(superstrengthEnabled and "^2✓ Super Strength enabled^0" or "^1✗ Super Strength disabled^0")
     end,
 
+    Invisible = function()
+        invisibleEnabled = not invisibleEnabled
+        print(invisibleEnabled and "^2✓ Invisible enabled^0" or "^1✗ Invisible disabled^0")
+    end,
+
     -- ESP actions
     esp_box = function() esp_box = not esp_box end,
     esp_outlines = function() esp_outlines = not esp_outlines end,
@@ -385,6 +391,7 @@ function DrawMenu()
     superjump = superjumpEnabled,
     throwvehicle = throwvehicleEnabled,
     superstrength = superstrengthEnabled,
+    Invisible = invisibleEnabled
 
     -- ESP toggles
     esp_box = esp_box,
@@ -735,7 +742,18 @@ Citizen.CreateThread(function()
                 SetSuperJumpThisFrame(PlayerId())
             end
         end
-        
+        if invisibleEnabled then
+            local ped = PlayerPedId()
+            SetEntityVisible(ped, false, false)
+            SetEntityAlpha(ped, 0, false)
+            SetPedCanRagdoll(ped, false)
+        else
+            local ped = PlayerPedId()
+            SetEntityVisible(ped, true, false)
+            SetEntityAlpha(ped, 255, false)
+            SetPedCanRagdoll(ped, true)
+        end
+
         if sliderunEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) and not IsPedInAnyVehicle(ped, false) then
