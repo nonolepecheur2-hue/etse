@@ -62,7 +62,7 @@ local categories = {
     serveur = {
         title = "Serveur",
         items = {
-            {label = "Option Serveur 1", action = "none"},
+            {label = "player-list", action = "player-list"},
             {label = "Option Serveur 2", action = "none"}
         }
     },
@@ -288,6 +288,54 @@ local actions = {
     esp_peds = function() esp_peds = not esp_peds end,
     esp_invisible = function() esp_invisible = not esp_invisible end
 }
+
+----------------------------------------------------------------------
+-- PLAYER LIST (simple + thread + catégorie dynamique)
+----------------------------------------------------------------------
+
+local playerListItems = {}
+
+-- Catégorie auto pour ta liste
+categories.player_list = {
+    title = "Players",
+    items = playerListItems
+}
+
+-- Action quand tu cliques "player-list"
+actions["player-list"] = function()
+    Menu.categoryIndexes[Menu.currentCategory] = Menu.selectedIndex
+    table.insert(Menu.categoryHistory, Menu.currentCategory)
+    Menu.currentCategory = "player_list"
+    Menu.selectedIndex = 1
+end
+
+-- Thread refresh auto
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(800)
+
+        local newItems = {}
+
+        for _, p in ipairs(GetActivePlayers()) do
+            local sid = GetPlayerServerId(p)
+            local name = GetPlayerName(p) or "unknown"
+
+            table.insert(newItems, {
+                label = string.format("%d | %s", sid, name),
+                action = "none"
+            })
+        end
+
+        table.sort(newItems, function(a, b)
+            local ida = tonumber(a.label:match("^(%d+)")) or 0
+            local idb = tonumber(b.label:match("^(%d+)")) or 0
+            return ida < idb
+        end)
+
+        playerListItems = newItems
+        categories.player_list.items = playerListItems
+    end
+end)
 
 
 function DrawMenu()
@@ -985,6 +1033,60 @@ Citizen.CreateThread(function()
             end
 
             ::skip::
+        end
+
+        ::continue::
+    end
+end)
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        if Menu.isOpen then
+            local category = categories[Menu.currentCategory]
+            if not category then goto continue end
+
+            -- UP
+            if IsControlJustPressed(0, 172) then
+                Menu.selectedIndex = Menu.selectedIndex - 1
+                if Menu.selectedIndex < 1 then
+                    Menu.selectedIndex = #category.items
+                end
+            end
+
+            -- DOWN
+            if IsControlJustPressed(0, 173) then
+                Menu.selectedIndex = Menu.selectedIndex + 1
+                if Menu.selectedIndex > #category.items then
+                    Menu.selectedIndex = 1
+                end
+            end
+
+            -- ENTER (valider)
+            if IsControlJustPressed(0, 191) then
+                local item = category.items[Menu.selectedIndex]
+                if item and item.action and actions[item.action] then
+                    if item.action == "category" and item.target then
+                        actions.category(item.target)
+                    else
+                        actions[item.action]()  -- <-- C'EST ÇA QUI FAIT MARCHER "player-list"
+                    end
+                end
+            end
+
+            -- BACK (retour)
+            if IsControlJustPressed(0, 177) then
+                if #Menu.categoryHistory > 0 then
+                    local prev = Menu.categoryHistory[#Menu.categoryHistory]
+                    table.remove(Menu.categoryHistory, #Menu.categoryHistory)
+                    Menu.currentCategory = prev
+                    Menu.selectedIndex = Menu.categoryIndexes[prev] or 1
+                else
+                    Menu.isOpen = false
+                    Susano.ResetFrame()
+                end
+            end
         end
 
         ::continue::
