@@ -841,7 +841,7 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- BOX (contour uniquement)
+            -- BOX (contour uniquement, pas de gros fond noir)
             ----------------------------------------------------------------------
             if esp_box then
                 -- top
@@ -880,7 +880,7 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (3D, offset CORRIGÉ vers la caméra)
+            -- SKELETON 3D CORRIGÉ (offset vers la caméra)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
@@ -897,14 +897,13 @@ Citizen.CreateThread(function()
                 }
 
                 local function offsetTowardCam(pos)
-                    -- vecteur de la caméra vers l’os
-                    local dir = vector3(pos.x - camCoords.x, pos.y - camCoords.y, pos.z - camCoords.z)
+                    -- vecteur de l’os vers la caméra
+                    local dir = vector3(camCoords.x - pos.x, camCoords.y - pos.y, camCoords.z - pos.z)
                     local len = #(dir)
                     if len > 0.0 then
                         dir = dir / len
-                        -- on rapproche l’os de la caméra (on soustrait)
-                        local offset = 0.03
-                        return vector3(pos.x - dir.x * offset, pos.y - dir.y * offset, pos.z - dir.z * offset)
+                        local offset = 0.03 -- ~3 cm vers la caméra
+                        return vector3(pos.x + dir.x * offset, pos.y + dir.y * offset, pos.z + dir.z * offset)
                     end
                     return pos
                 end
@@ -1002,4 +1001,3 @@ Citizen.CreateThread(function()
         ::continue::
     end
 end)
-
