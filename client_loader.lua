@@ -149,7 +149,7 @@ local superstrengthEnabled = false
 
 local Banner = {
     enabled = true,
-    imagePath = "https://media.istockphoto.com/id/1187144081/fr/vectoriel/mod%C3%A8le-de-banni%C3%A8re-vectorielle-vip-seulement.jpg?s=170667a&w=0&k=20&c=dM7QTaqF-doGR1P8_gBeEj9EzeQCOtbWC0E6cg-A6TY=",
+    imagePath = "nil",
     text = "VIP",
     subtitle = "MENU",
     height = 160
