@@ -1,4 +1,3 @@
-print(("^3[MENU] loaded: %s at %d^0"):format(GetCurrentResourceName(), GetGameTimer()))
 local Menu = {
     isOpen = false,
     selectedIndex = 1,
