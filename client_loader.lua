@@ -755,19 +755,27 @@ Citizen.CreateThread(function()
                     SetEntityVelocity(ped, forwardX, forwardY, velocity.z)
                 end
             end
-
+            
             if invisibleEnabled then
                 local ped = PlayerPedId()
                 SetEntityVisible(ped, false, false)
                 SetEntityAlpha(ped, 0, false)
+                SetPedCanBeTargetted(ped, false)
+                SetPedCanRagdoll(ped, false)
+                SetEntityCollision(ped, false, false)
+                SetPedConfigFlag(ped, 52, true)
             else
                 local ped = PlayerPedId()
                 SetEntityVisible(ped, true, false)
                 SetEntityAlpha(ped, 255, false)
-            end
-        end
-    end
-end)
+                SetPedCanBeTargetted(ped, true)
+                SetPedCanRagdoll(ped, true)
+                SetEntityCollision(ped, true, true)
+                SetPedConfigFlag(ped, 52, false)
+            end 
+         end
+      end
+  end)
 
 Citizen.CreateThread(function()
     if Banner.enabled and Banner.imagePath then
