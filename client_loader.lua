@@ -774,16 +774,17 @@ Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
 
-        -- Si aucun ESP n'est activé, on skip pour perf
-        if not (esp_box or esp_skeleton or esp_tracers or esp_nametag or esp_distance or esp_health or esp_armor) then
-            goto continue
-        end
+        if not (
+            esp_box or esp_outlines or esp_skeleton or esp_tracers or
+            esp_health or esp_armor or esp_nametag or esp_distance
+        ) then goto continue end
+
+        Susano.BeginFrame()
 
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
-        local players = GetActivePlayers()
 
-        for _, player in ipairs(players) do
+        for _, player in ipairs(GetActivePlayers()) do
             local ped = GetPlayerPed(player)
             if ped == 0 or not DoesEntityExist(ped) then goto skip end
             if ped == myPed and esp_ignore_self then goto skip end
@@ -792,96 +793,74 @@ Citizen.CreateThread(function()
             local dist = #(coords - myCoords)
             if dist > 300.0 then goto skip end
 
-            ----------------------------------------------------------------------
-            -- PROJECTION 2D (HEAD / FEET)
-            ----------------------------------------------------------------------
+            -- Projection 2D
             local head = GetPedBoneCoords(ped, 31086)
             local feet = GetPedBoneCoords(ped, 0)
 
-            local hOnScreen, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.25)
-            local fOnScreen, fx, fy = World3dToScreen2d(feet.x, feet.y, feet.z - 0.1)
+            local hOk, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.25)
+            local fOk, fx, fy = World3dToScreen2d(feet.x, feet.y, feet.z - 0.1)
 
-            if not (hOnScreen and fOnScreen) then goto skip end
+            if not (hOk and fOk) then goto skip end
 
-            local height = (fy - hy)
-            if height <= 0 then goto skip end
-
+            local height = fy - hy
             local width = height * 0.45
             local left = hx - width
             local right = hx + width
 
             ----------------------------------------------------------------------
-            -- BOX 2D (CORNERS) - Susano.DrawLine
+            -- BOX CORNERS
             ----------------------------------------------------------------------
             if esp_box then
-                local r, g, b, a = 255, 255, 255, 255
+                local c = {255, 255, 255, 255}
                 local corner = height * 0.20
 
-                -- Top left
-                Susano.DrawLine(left, hy, 0, left + corner, hy, 0, r, g, b, a)
-                Susano.DrawLine(left, hy, 0, left, hy + corner, 0, r, g, b, a)
+                Susano.DrawLine(left, hy, 0, left + corner, hy, 0, c[1], c[2], c[3], c[4])
+                Susano.DrawLine(left, hy, 0, left, hy + corner, 0, c[1], c[2], c[3], c[4])
 
-                -- Top right
-                Susano.DrawLine(right, hy, 0, right - corner, hy, 0, r, g, b, a)
-                Susano.DrawLine(right, hy, 0, right, hy + corner, 0, r, g, b, a)
+                Susano.DrawLine(right, hy, 0, right - corner, hy, 0, c[1], c[2], c[3], c[4])
+                Susano.DrawLine(right, hy, 0, right, hy + corner, 0, c[1], c[2], c[3], c[4])
 
-                -- Bottom left
-                Susano.DrawLine(left, fy, 0, left + corner, fy, 0, r, g, b, a)
-                Susano.DrawLine(left, fy, 0, left, fy - corner, 0, r, g, b, a)
+                Susano.DrawLine(left, fy, 0, left + corner, fy, 0, c[1], c[2], c[3], c[4])
+                Susano.DrawLine(left, fy, 0, left, fy - corner, 0, c[1], c[2], c[3], c[4])
 
-                -- Bottom right
-                Susano.DrawLine(right, fy, 0, right - corner, fy, 0, r, g, b, a)
-                Susano.DrawLine(right, fy, 0, right, fy - corner, 0, r, g, b, a)
+                Susano.DrawLine(right, fy, 0, right - corner, fy, 0, c[1], c[2], c[3], c[4])
+                Susano.DrawLine(right, fy, 0, right, fy - corner, 0, c[1], c[2], c[3], c[4])
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (3D LINES, RENDU SUSANO)
+            -- OUTLINES
             ----------------------------------------------------------------------
-            if esp_skeleton then
-                local bones = {
-                    {31086, 11816}, {11816, 1}, {1, 0},          -- Head → Neck → Spine → Pelvis
-                    {11816, 24818}, {24818, 25457}, {25457, 61163}, -- Right arm
-                    {11816, 13612}, {13612, 33391}, {33391, 57005}, -- Left arm
-                    {0, 65245}, {65245, 40269}, {40269, 37388},     -- Right leg
-                    {0, 63931}, {63931, 6442}, {6442, 2961}         -- Left leg
-                }
-
-                for _, b in ipairs(bones) do
-                    local p1 = GetPedBoneCoords(ped, b[1])
-                    local p2 = GetPedBoneCoords(ped, b[2])
-                    Susano.DrawLine(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, 0, 255, 0, 255)
-                end
+            if esp_outlines then
+                Susano.DrawLine(left, hy, 0, right, hy, 0, 255, 255, 255, 255)
+                Susano.DrawLine(left, fy, 0, right, fy, 0, 255, 255, 255, 255)
+                Susano.DrawLine(left, hy, 0, left, fy, 0, 255, 255, 255, 255)
+                Susano.DrawLine(right, hy, 0, right, fy, 0, 255, 255, 255, 255)
             end
 
             ----------------------------------------------------------------------
-            -- TRACERS (DEPUIS TES PIEDS)
+            -- TRACERS
             ----------------------------------------------------------------------
             if esp_tracers then
-                Susano.DrawLine(
-                    myCoords.x, myCoords.y, myCoords.z - 0.9,
-                    coords.x, coords.y, coords.z - 0.9,
-                    255, 255, 255, 255
-                )
+                local _, tx, ty = World3dToScreen2d(myCoords.x, myCoords.y, myCoords.z - 0.9)
+                Susano.DrawLine(tx, ty, 0, hx, fy, 0, 255, 255, 255, 255)
             end
 
             ----------------------------------------------------------------------
-            -- NAMETAG (AU-DESSUS DE LA TÊTE)
+            -- NAMETAG
             ----------------------------------------------------------------------
             if esp_nametag then
-                local name = GetPlayerName(player)
-                Susano.DrawText(hx, hy - 0.02, name, 18, 255, 255, 255, 255, true)
+                Susano.DrawText(hx, hy - 0.02, GetPlayerName(player), 18, 255, 255, 255, 255, true)
             end
 
             ----------------------------------------------------------------------
-            -- DISTANCE (SOUS LES PIEDS)
+            -- DISTANCE
             ----------------------------------------------------------------------
             if esp_distance then
-                local d = string.format("%.1f m", dist)
-                Susano.DrawText(hx, fy + 0.02, d, 16, 200, 200, 200, 255, true)
+                Susano.DrawText(hx, fy + 0.02, string.format("%.1f m", dist), 16, 200, 200, 200, 255, true)
             end
 
             ----------------------------------------------------------------------
-            -- HEALTH BAR (GAUCHE DE LA BOX)
+            -- HEALTH BAR
             ----------------------------------------------------------------------
             if esp_health then
                 local hp = GetEntityHealth(ped)
@@ -891,43 +870,38 @@ Citizen.CreateThread(function()
                 local barH = height
                 local barW = 0.0035
 
-                -- Fond
                 Susano.DrawRectFilled(left - 0.008, hy + barH / 2, barW, barH, 0, 0, 0, 180)
-                -- Remplissage
+
                 local fillH = barH * pct
                 local centerY = fy - fillH / 2
-                local r, g = 0, 255
-                if pct < 0.5 then
-                    r = 255
-                    g = 255 * (pct * 2)
-                else
-                    r = 255 * (2 - pct * 2)
-                    g = 255
-                end
-                Susano.DrawRectFilled(left - 0.008, centerY, barW, fillH, r, g, 0, 255)
+
+                Susano.DrawRectFilled(left - 0.008, centerY, barW, fillH, 0, 255, 0, 255)
             end
 
             ----------------------------------------------------------------------
-            -- ARMOR BAR (DROITE DE LA BOX)
+            -- ARMOR BAR
             ----------------------------------------------------------------------
             if esp_armor then
                 local armor = GetPedArmour(ped)
-                local pct = math.max(0, math.min(1, armor / 100.0))
+                local pct = math.max(0, math.min(1, armor / 100))
 
                 local barH = height
                 local barW = 0.0035
 
-                -- Fond
                 Susano.DrawRectFilled(right + 0.008, hy + barH / 2, barW, barH, 0, 0, 0, 180)
-                -- Remplissage
+
                 local fillH = barH * pct
                 local centerY = fy - fillH / 2
+
                 Susano.DrawRectFilled(right + 0.008, centerY, barW, fillH, 0, 150, 255, 255)
             end
 
             ::skip::
         end
 
+        Susano.SubmitFrame()
+
         ::continue::
     end
 end)
+
