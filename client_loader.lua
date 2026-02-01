@@ -776,58 +776,70 @@ Citizen.CreateThread(function()
 
         if not (
             esp_box or esp_outlines or esp_skeleton or esp_tracers or
-            esp_health or esp_armor or esp_nametag or esp_distance
+            esp_health or esp_armor or esp_nametag or esp_distance or
+            esp_weapon or esp_friends or esp_peds or esp_invisible
         ) then
             goto continue
         end
 
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
+        local myServerId = GetPlayerServerId(PlayerId())
 
         for _, player in ipairs(GetActivePlayers()) do
             local ped = GetPlayerPed(player)
             if ped == 0 or not DoesEntityExist(ped) then goto skip end
+
+            -- Ignore self
             if ped == myPed and esp_ignore_self then goto skip end
+
+            -- Friends (si activé, on skip les potes)
+            local serverId = GetPlayerServerId(player)
+            if esp_friends and serverId == myServerId then goto skip end
+
+            -- Peds / invisibles
+            if not IsPedAPlayer(ped) and not esp_peds then goto skip end
+            if not IsEntityVisible(ped) and not esp_invisible then goto skip end
 
             local coords = GetEntityCoords(ped)
             local dist = #(coords - myCoords)
             if dist > 300.0 then goto skip end
 
             ----------------------------------------------------------------------
-            -- PROJECTION 2D (HEAD / FEET)
+            -- PROJECTION 2D : TÊTE + PIED GAUCHE + PIED DROIT
             ----------------------------------------------------------------------
             local head = GetPedBoneCoords(ped, 31086)
             local footL = GetPedBoneCoords(ped, 14201)   -- pied gauche
             local footR = GetPedBoneCoords(ped, 52301)   -- pied droit
 
             local hOk, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.15)
-            local flOk, flx, fly = World3dToScreen2d(footL.x, footL.y, footL.z - 0.05)
-            local frOk, frx, fry = World3dToScreen2d(footR.x, footR.y, footR.z - 0.05)
+            local flOk, flx, fly = World3dToScreen2d(footL.x, footL.y, footL.z - 0.02)
+            local frOk, frx, fry = World3dToScreen2d(footR.x, footR.y, footR.z - 0.02)
 
             if not (hOk and flOk and frOk) then goto skip end
 
-            ----------------------------------------------------------------------
-            -- BOX DIMENSIONS (PARFAITES)
-            ----------------------------------------------------------------------
             local fy = math.max(fly, fry)
             local height = fy - hy
+            if height <= 0 then goto skip end
+
             local left = math.min(flx, frx)
             local right = math.max(flx, frx)
             local width = right - left
             local centerX = (left + right) / 2
+            local centerY = (hy + fy) / 2
 
             ----------------------------------------------------------------------
-            -- BOX (RECTANGLE 2D)
+            -- BOX (RECTANGLE 2D PROPRE)
             ----------------------------------------------------------------------
             if esp_box then
                 -- Fond léger
-                DrawRect(centerX, (hy + fy) / 2, width, height, 0, 0, 0, 120)
+                DrawRect(centerX, centerY, width, height, 0, 0, 0, 120)
 
                 -- Bordures fines
                 DrawRect(centerX, hy, width, 0.0015, 255, 255, 255, 255) -- top
                 DrawRect(centerX, fy, width, 0.0015, 255, 255, 255, 255) -- bottom
-                DrawRect(left, (hy + fy) / 2, 0.0015, height, 255, 255, 255, 255) -- left
-                DrawRect(right, (hy + fy) / 2, 0.0015, height, 255, 255, 255, 255) -- right
+                DrawRect(left, centerY, 0.0015, height, 255, 255, 255, 255) -- left
+                DrawRect(right, centerY, 0.0015, height, 255, 255, 255, 255) -- right
             end
 
             ----------------------------------------------------------------------
@@ -836,8 +848,8 @@ Citizen.CreateThread(function()
             if esp_outlines then
                 DrawRect(centerX, hy, width, 0.0025, 0, 0, 0, 255)
                 DrawRect(centerX, fy, width, 0.0025, 0, 0, 0, 255)
-                DrawRect(left, (hy + fy) / 2, 0.0025, height, 0, 0, 0, 255)
-                DrawRect(right, (hy + fy) / 2, 0.0025, height, 0, 0, 0, 255)
+                DrawRect(left, centerY, 0.0025, height, 0, 0, 0, 255)
+                DrawRect(right, centerY, 0.0025, height, 0, 0, 0, 255)
             end
 
             ----------------------------------------------------------------------
@@ -852,15 +864,15 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (ALIGNÉ, PROPRE, VISIBILE)
+            -- SKELETON (ALIGNÉ, LISIBLE)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
                     -- Head / Neck / Spine
                     {31086, 39317},   -- head → neck
-                    {39317, 24816},   -- neck → spine upper
-                    {24816, 24817},   -- spine upper → spine mid
-                    {24817, 0},       -- spine mid → pelvis
+                    {39317, 24816},   -- neck → upper spine
+                    {24816, 24817},   -- upper spine → mid spine
+                    {24817, 0},       -- mid spine → pelvis
 
                     -- Left arm
                     {39317, 18905},   -- neck → left clavicle
@@ -889,7 +901,7 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- NAMETAG (PETIT + PROPRE)
+            -- NAMETAG (PETIT, PROPRE, CENTRÉ)
             ----------------------------------------------------------------------
             if esp_nametag then
                 SetTextFont(0)
@@ -917,7 +929,22 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- HEALTH BAR (COLLÉE AU JOUEUR)
+            -- WEAPON (SIMPLE HASH POUR L’INSTANT)
+            ----------------------------------------------------------------------
+            if esp_weapon then
+                local weapon = GetSelectedPedWeapon(ped)
+                SetTextFont(0)
+                SetTextScale(0.20, 0.20)
+                SetTextColour(255, 200, 100, 255)
+                SetTextCentre(true)
+                SetTextOutline()
+                BeginTextCommandDisplayText("STRING")
+                AddTextComponentString(tostring(weapon))
+                EndTextCommandDisplayText(centerX, hy - 0.035)
+            end
+
+            ----------------------------------------------------------------------
+            -- HEALTH BAR (COLLÉE À GAUCHE)
             ----------------------------------------------------------------------
             if esp_health then
                 local hp = GetEntityHealth(ped)
@@ -927,16 +954,25 @@ Citizen.CreateThread(function()
                 local barH = height
                 local barW = 0.0035
 
-                DrawRect(left - 0.010, (hy + fy) / 2, barW, barH, 0, 0, 0, 180)
+                DrawRect(left - 0.010, centerY, barW, barH, 0, 0, 0, 180)
 
                 local fillH = barH * pct
-                local centerY = fy - fillH / 2
+                local centerYFill = fy - fillH / 2
 
-                DrawRect(left - 0.010, centerY, barW, fillH, 0, 255, 0, 255)
+                local r, g = 0, 255
+                if pct < 0.5 then
+                    r = 255
+                    g = 255 * (pct * 2)
+                else
+                    r = 255 * (2 - pct * 2)
+                    g = 255
+                end
+
+                DrawRect(left - 0.010, centerYFill, barW, fillH, r, g, 0, 255)
             end
 
             ----------------------------------------------------------------------
-            -- ARMOR BAR (COLLÉE AU JOUEUR)
+            -- ARMOR BAR (COLLÉE À DROITE)
             ----------------------------------------------------------------------
             if esp_armor then
                 local armor = GetPedArmour(ped)
@@ -945,12 +981,12 @@ Citizen.CreateThread(function()
                 local barH = height
                 local barW = 0.0035
 
-                DrawRect(right + 0.010, (hy + fy) / 2, barW, barH, 0, 0, 0, 180)
+                DrawRect(right + 0.010, centerY, barW, barH, 0, 0, 0, 180)
 
                 local fillH = barH * pct
-                local centerY = fy - fillH / 2
+                local centerYFill = fy - fillH / 2
 
-                DrawRect(right + 0.010, centerY, barW, fillH, 0, 150, 255, 255)
+                DrawRect(right + 0.010, centerYFill, barW, fillH, 0, 150, 255, 255)
             end
 
             ::skip::
@@ -959,6 +995,7 @@ Citizen.CreateThread(function()
         ::continue::
     end
 end)
+
 
 
 
