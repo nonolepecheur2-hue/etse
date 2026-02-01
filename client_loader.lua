@@ -831,6 +831,11 @@ Citizen.CreateThread(function()
         local myServerId = GetPlayerServerId(PlayerId())
         local camCoords  = GetGameplayCamCoord()
 
+        ----------------------------------------------------------------------
+        -- FRAME SUSANO (OBLIGATOIRE)
+        ----------------------------------------------------------------------
+        Susano.BeginFrame()
+
         for _, player in ipairs(GetActivePlayers()) do
             local ped = GetPlayerPed(player)
             if ped == 0 or not DoesEntityExist(ped) then goto skip end
@@ -879,46 +884,46 @@ Citizen.CreateThread(function()
             -- CHAMS
             ----------------------------------------------------------------------
             if esp_chams then
-                DrawRectFilled(centerX, centerY, width, height, 0, 150, 255, 80)
+                Susano.DrawRectFilled(centerX, centerY, width, height, 0, 0.6, 1, 0.25, 0)
             end
 
             ----------------------------------------------------------------------
             -- BOX
             ----------------------------------------------------------------------
             if esp_box then
-                DrawRectFilled(centerX, centerY, width, height, 0, 0, 0, 120)
+                Susano.DrawRectFilled(centerX, centerY, width, height, 0, 0, 0, 0.45, 0)
 
-                local t = 0.0015
-                DrawRectFilled(centerX, hy, width, t, 255, 255, 255, 255)
-                DrawRectFilled(centerX, fy, width, t, 255, 255, 255, 255)
-                DrawRectFilled(left, centerY, t, height, 255, 255, 255, 255)
-                DrawRectFilled(right, centerY, t, height, 255, 255, 255, 255)
+                local t = 1.5
+                Susano.DrawRect(centerX, hy, width, t, 1, 1, 1, 1, 1)
+                Susano.DrawRect(centerX, fy, width, t, 1, 1, 1, 1, 1)
+                Susano.DrawRect(left, centerY, t, height, 1, 1, 1, 1, 1)
+                Susano.DrawRect(right, centerY, t, height, 1, 1, 1, 1, 1)
             end
 
             ----------------------------------------------------------------------
             -- OUTLINES
             ----------------------------------------------------------------------
             if esp_outlines then
-                local t = 0.0025
-                DrawRectFilled(centerX, hy, width, t, 0, 0, 0, 255)
-                DrawRectFilled(centerX, fy, width, t, 0, 0, 0, 255)
-                DrawRectFilled(left, centerY, t, height, 0, 0, 0, 255)
-                DrawRectFilled(right, centerY, t, height, 0, 0, 0, 255)
+                local t = 2.5
+                Susano.DrawRect(centerX, hy, width, t, 0, 0, 0, 1, 1)
+                Susano.DrawRect(centerX, fy, width, t, 0, 0, 0, 1, 1)
+                Susano.DrawRect(left, centerY, t, height, 0, 0, 0, 1, 1)
+                Susano.DrawRect(right, centerY, t, height, 0, 0, 0, 1, 1)
             end
 
             ----------------------------------------------------------------------
-            -- TRACERS (2D)
+            -- TRACERS
             ----------------------------------------------------------------------
             if esp_tracers then
                 local ok1, mx, my = World3dToScreen2d(myCoords.x, myCoords.y, myCoords.z - 0.9)
                 local ok2, tx, ty = World3dToScreen2d(coords.x, coords.y, coords.z - 0.9)
                 if ok1 and ok2 then
-                    DrawLine(mx, my, tx, ty, 255, 255, 255, 255)
+                    Susano.DrawLine(mx, my, tx, ty, 1, 1, 1, 1, 2)
                 end
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (2D overlay)
+            -- SKELETON (BLANC, 2D OVERLAY, TRAVERSANT)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
@@ -944,7 +949,7 @@ Citizen.CreateThread(function()
                     local ok2, x2, y2 = World3dToScreen2d(p2.x, p2.y, p2.z)
 
                     if ok1 and ok2 then
-                        DrawLine(x1, y1, x2, y2, 0, 255, 0, 255)
+                        Susano.DrawLine(x1, y1, x2, y2, 1, 1, 1, 1, 2)
                     end
                 end
             end
@@ -953,21 +958,21 @@ Citizen.CreateThread(function()
             -- NAMETAG
             ----------------------------------------------------------------------
             if esp_nametag then
-                DrawText(GetPlayerName(player), centerX, hy - 0.018, 0.22, 255, 255, 255, 255, true, true)
+                Susano.DrawText(centerX, hy - 18, GetPlayerName(player), 18, 1, 1, 1, 1)
             end
 
             ----------------------------------------------------------------------
             -- DISTANCE
             ----------------------------------------------------------------------
             if esp_distance then
-                DrawText(string.format("%.1f m", dist), centerX, fy + 0.020, 0.20, 200, 200, 200, 255, true, true)
+                Susano.DrawText(centerX, fy + 20, string.format("%.1f m", dist), 16, 0.8, 0.8, 0.8, 1)
             end
 
             ----------------------------------------------------------------------
             -- WEAPON
             ----------------------------------------------------------------------
             if esp_weapon then
-                DrawText(tostring(GetSelectedPedWeapon(ped)), centerX, hy - 0.038, 0.20, 255, 200, 100, 255, true, true)
+                Susano.DrawText(centerX, hy - 36, tostring(GetSelectedPedWeapon(ped)), 16, 1, 0.8, 0.4, 1)
             end
 
             ----------------------------------------------------------------------
@@ -979,14 +984,14 @@ Citizen.CreateThread(function()
                 local pct   = math.max(0.0, math.min(1.0, (hp - 100) / (maxHp - 100)))
 
                 local barH = height
-                local barW = 0.0035
+                local barW = 4
 
-                DrawRectFilled(left - 0.010, centerY, barW, barH, 0, 0, 0, 180)
+                Susano.DrawRectFilled(left - 10, centerY, barW, barH, 0, 0, 0, 0.7, 0)
 
                 local fillH = barH * pct
                 local fillY = fy - fillH / 2
 
-                DrawRectFilled(left - 0.010, fillY, barW, fillH, 0, 255, 0, 255)
+                Susano.DrawRectFilled(left - 10, fillY, barW, fillH, 0, 1, 0, 1, 0)
             end
 
             ----------------------------------------------------------------------
@@ -997,20 +1002,26 @@ Citizen.CreateThread(function()
                 local pct   = math.max(0.0, math.min(1.0, armor / 100.0))
 
                 local barH = height
-                local barW = 0.0035
+                local barW = 4
 
-                DrawRectFilled(right + 0.010, centerY, barW, barH, 0, 0, 0, 180)
+                Susano.DrawRectFilled(right + 10, centerY, barW, barH, 0, 0, 0, 0.7, 0)
 
                 local fillH = barH * pct
                 local fillY = fy - fillH / 2
 
-                DrawRectFilled(right + 0.010, fillY, barW, fillH, 0, 150, 255, 255)
+                Susano.DrawRectFilled(right + 10, fillY, barW, fillH, 0, 0.6, 1, 1, 0)
             end
 
             ::skip::
         end
 
+        ----------------------------------------------------------------------
+        -- FIN DE FRAME SUSANO
+        ----------------------------------------------------------------------
+        Susano.SubmitFrame()
+
         ::continue::
     end
 end)
+
 
