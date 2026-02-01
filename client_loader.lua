@@ -1,5 +1,4 @@
 
-
 local Menu = {
     isOpen = false,
     selectedIndex = 1,
@@ -58,7 +57,10 @@ local categories = {
         title = "Player - Other",
         items = {
             {label = "Throw From Vehicle", action = "throwvehicle"},
-            {label = "Super Strength", action = "superstrength"}
+            {label = "Super Strength", action = "superstrength"},
+            {label = "Explosive Melee", action = "explosive_melee
+"}
+            
         }
     },
 
@@ -151,6 +153,8 @@ local superjumpEnabled = false
 local throwvehicleEnabled = false
 local superstrengthEnabled = false
 local infiniteStaminaEnabled = false
+local explosiveMeleeEnabled = false
+
 
 local Banner = {
     enabled = true,
@@ -281,6 +285,12 @@ local actions = {
         print(infiniteStaminaEnabled and "^2✓ Infinite Stamina enabled^0" or "^1✗ Infinite Stamina disabled^0")
     end,
 
+    explosive_melee = function()
+        explosiveMeleeEnabled = not explosiveMeleeEnabled
+        print(explosiveMeleeEnabled and "^2✓ Explosive Melee enabled^0" or "^1✗ Explosive Melee disabled^0")
+    end,
+
+
     -- ESP actions
     esp_box = function() esp_box = not esp_box end,
     esp_outlines = function() esp_outlines = not esp_outlines end,
@@ -299,17 +309,18 @@ local actions = {
 }
 
 ----------------------------------------------------------------------
--- PLAYER LIST (simple + thread + catégorie dynamique + distance + select)
+-- PLAYER LIST (simple + thread + catégorie dynamique)
 ----------------------------------------------------------------------
 
-local selectedPlayerSid = nil
 local playerListItems = {}
 
+-- Catégorie auto pour ta liste
 categories.player_list = {
     title = "Players",
     items = playerListItems
 }
 
+-- Action quand tu cliques "player-list"
 actions["player-list"] = function()
     Menu.categoryIndexes[Menu.currentCategory] = Menu.selectedIndex
     table.insert(Menu.categoryHistory, Menu.currentCategory)
@@ -317,47 +328,27 @@ actions["player-list"] = function()
     Menu.selectedIndex = 1
 end
 
--- bouton select (toggle)
-actions.select_player = function(sid)
-    sid = tonumber(sid)
-    if selectedPlayerSid == sid then
-        selectedPlayerSid = nil
-    else
-        selectedPlayerSid = sid
-    end
-end
-
+-- Thread refresh auto
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(800)
 
         local newItems = {}
 
-        local myPed = PlayerPedId()
-        local myCoords = GetEntityCoords(myPed)
-
         for _, p in ipairs(GetActivePlayers()) do
             local sid = GetPlayerServerId(p)
             local name = GetPlayerName(p) or "unknown"
 
-            local distTxt = "--"
-            local ped = GetPlayerPed(p)
-            if ped ~= 0 and DoesEntityExist(ped) then
-                local coords = GetEntityCoords(ped)
-                local dist = #(coords - myCoords)
-                distTxt = string.format("%.0fm", dist)
-            end
-
             table.insert(newItems, {
                 label = string.format("%d | %s", sid, name),
-                action = "select_player",
-                target = sid,
-                distance = distTxt
+                action = "none"
             })
         end
 
         table.sort(newItems, function(a, b)
-            return (tonumber(a.target) or 0) < (tonumber(b.target) or 0)
+            local ida = tonumber(a.label:match("^(%d+)")) or 0
+            local idb = tonumber(b.label:match("^(%d+)")) or 0
+            return ida < idb
         end)
 
         playerListItems = newItems
@@ -366,245 +357,123 @@ Citizen.CreateThread(function()
 end)
 
 
-
 function DrawMenu()
     if not Menu.isOpen then return end
-
+    
     Susano.BeginFrame()
-
+    
     local category = categories[Menu.currentCategory]
     if not category then
         Menu.currentCategory = "main"
         category = categories["main"]
     end
-
+    
     local x, y = Style.x, Style.y
     local width, height = Style.width, Style.height
     local spacing = Style.itemSpacing
+    
     local currentY = y
-
-    -- Toggle states: déclaré UNE SEULE FOIS
-    local toggleStates = {
-        godmode = godmodeEnabled,
-        noclip = noclipEnabled,
-        sliderun = sliderunEnabled,
-        superjump = superjumpEnabled,
-        throwvehicle = throwvehicleEnabled,
-        superstrength = superstrengthEnabled,
-
-        esp_box = esp_box,
-        esp_outlines = esp_outlines,
-        esp_skeleton = esp_skeleton,
-        esp_chams = esp_chams,
-        esp_tracers = esp_tracers,
-        esp_health = esp_health,
-        esp_armor = esp_armor,
-        esp_nametag = esp_nametag,
-        esp_distance = esp_distance,
-        esp_weapon = esp_weapon,
-        esp_ignore_self = esp_ignore_self,
-        esp_friends = esp_friends,
-        esp_peds = esp_peds,
-        esp_invisible = esp_invisible,
-
-        -- ON/OFF dépend du joueur sélectionné
-        select_player = false,
-    }
-
-    -- Banner
-    if Banner.enabled then
+    
+  if Banner.enabled then
         if bannerTexture and bannerTexture > 0 then
             Susano.DrawImage(bannerTexture, x, currentY, width, Banner.height, 1, 1, 1, 1, Style.bannerRounding)
         else
-            Susano.DrawRectFilled(x, currentY, width, Banner.height, 0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
-            Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
-
+            Susano.DrawRectFilled(x, currentY, width, Banner.height, 
+                0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
+            
+            Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 
+                0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
+            
             local titleWidth = Susano.GetTextWidth(Banner.text, Style.bannerTitleSize)
-            Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, Banner.text, Style.bannerTitleSize,
+            Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, 
+                Banner.text, Style.bannerTitleSize, 
                 Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0)
-
+            
             local subWidth = Susano.GetTextWidth(Banner.subtitle, Style.bannerSubtitleSize)
-            Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, Banner.subtitle, Style.bannerSubtitleSize,
+            Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, 
+                Banner.subtitle, Style.bannerSubtitleSize, 
                 Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
         end
+        
         currentY = currentY + Banner.height
     end
-
-    -- Header
+    
     Susano.DrawRectFilled(x, currentY, width, Style.headerHeight,
-        Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4],
+        Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], 
         Style.headerRounding)
-
+    
     local titleText = category.title:upper()
-    Susano.DrawText(x + 15, currentY + 14, titleText, Style.titleSize,
+    Susano.DrawText(x + 15, currentY + 14, 
+        titleText, Style.titleSize, 
         Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-    Susano.DrawText(x + 15.3, currentY + 14, titleText, Style.titleSize,
+    Susano.DrawText(x + 15.3, currentY + 14, 
+        titleText, Style.titleSize, 
         Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
-
+    
     local versionText = "v1.0"
     local versionWidth = Susano.GetTextWidth(versionText, Style.footerSize)
-    Susano.DrawText(x + width - versionWidth - 15, currentY + 17, versionText, Style.footerSize,
+    Susano.DrawText(x + width - versionWidth - 15, currentY + 17, 
+        versionText, Style.footerSize, 
         Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
-
+    
     currentY = currentY + Style.headerHeight
-
-    -- Items
+    
     local startY = currentY
     for i, item in ipairs(category.items) do
         local itemY = startY + ((i - 1) * (height + spacing))
         local isSelected = (i == Menu.selectedIndex)
-
+        
         if isSelected then
-            Susano.DrawRectFilled(x, itemY, width, height,
-                Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4],
+            Susano.DrawRectFilled(x, itemY, width, height, 
+                Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], 
                 Style.itemRounding)
         else
-            Susano.DrawRectFilled(x, itemY, width, height,
-                Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4],
+            Susano.DrawRectFilled(x, itemY, width, height, 
+                Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4], 
                 Style.itemRounding)
         end
-
-        -- Texte principal
+        
         local textX = x + 15
-        Susano.DrawText(textX, itemY + 12, item.label, Style.itemSize,
+        Susano.DrawText(textX, itemY + 12, 
+            item.label, Style.itemSize, 
             Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-        Susano.DrawText(textX + 0.3, itemY + 12, item.label, Style.itemSize,
+        Susano.DrawText(textX + 0.3, itemY + 12, 
+            item.label, Style.itemSize, 
             Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
-
-        -- Catégories -> flèche
+        
         if item.action == "category" and item.target then
             local arrowX = x + width - 20
-            Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize,
+            Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, 
                 Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
         else
-            ------------------------------------------------------------------
-            -- PLAYER LIST: distance à droite + toggle select
-            ------------------------------------------------------------------
-            if Menu.currentCategory == "player_list" and item.action == "select_player" then
-                toggleStates.select_player = (tonumber(selectedPlayerSid) == tonumber(item.target))
+            local toggleStates = {
+    godmode = godmodeEnabled,
+    noclip = noclipEnabled,
+    sliderun = sliderunEnabled,
+    superjump = superjumpEnabled,
+    throwvehicle = throwvehicleEnabled,
+    superstrength = superstrengthEnabled,
 
-                -- distance à droite (avant le toggle)
-                if item.distance then
-                    local distW = Susano.GetTextWidth(item.distance, Style.itemSize - 4)
-                    local distX = x + width - 20 - 40 - 10 - distW -- 20 padding droite, 40 toggle, 10 marge
-                    Susano.DrawText(distX, itemY + 15, item.distance, Style.itemSize - 4,
-                        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.85)
-                end
-            end
+    -- ESP toggles
+    esp_box = esp_box,
+    esp_outlines = esp_outlines,
+    esp_skeleton = esp_skeleton,
+    esp_chams = esp_chams,
+    esp_tracers = esp_tracers,
+    esp_health = esp_health,
+    esp_armor = esp_armor,
+    esp_nametag = esp_nametag,
+    esp_distance = esp_distance,
+    esp_weapon = esp_weapon,
+    esp_ignore_self = esp_ignore_self,
+    esp_friends = esp_friends,
+    esp_peds = esp_peds,
+    esp_invisible = esp_invisible,
+    infinite_stamina = infiniteStaminaEnabled,
+    explosive-melee = explosiveMeleeEnabled
+                
 
-            ------------------------------------------------------------------
-            -- Sliders (inchangé)
-            ------------------------------------------------------------------
-            local sliderActions = { noclip = true, sliderun = true }
-            local isSlider = sliderActions[item.action] == true
-
-            local buttonActions = { revive = true, heal = true }
-            local isButton = buttonActions[item.action] == true
-
-            if isSlider then
-                local sliderWidth = 100
-                local sliderHeight = 6
-                local sliderX = x + width - sliderWidth - 80
-                local sliderY = itemY + (height - sliderHeight) / 2
-
-                local currentValue, minValue, maxValue
-                if item.action == "noclip" then
-                    currentValue = noclipSpeed
-                    minValue = 0.5
-                    maxValue = 10.0
-                elseif item.action == "sliderun" then
-                    currentValue = sliderunSpeed
-                    minValue = 1.0
-                    maxValue = 20.0
-                end
-
-                local percent = (currentValue - minValue) / (maxValue - minValue)
-
-                Susano.DrawRectFilled(sliderX, sliderY, sliderWidth, sliderHeight, 0.2, 0.2, 0.2, 0.7, 3.0)
-                Susano.DrawRectFilled(sliderX, sliderY, sliderWidth * percent, sliderHeight,
-                    Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0, 3.0)
-
-                local thumbSize = 12
-                local thumbX = sliderX + (sliderWidth * percent) - (thumbSize / 2)
-                local thumbY = itemY + (height - thumbSize) / 2
-                Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize, 1.0, 1.0, 1.0, 1.0, 6.0)
-
-                local valueText = string.format("%.0f", currentValue)
-                Susano.DrawText(sliderX + sliderWidth + 5, itemY + 15, valueText, Style.itemSize - 4,
-                    Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
-            end
-
-            ------------------------------------------------------------------
-            -- Toggle (inclut select_player)
-            ------------------------------------------------------------------
-            if (not isButton) and toggleStates[item.action] ~= nil then
-                local toggleWidth = 40
-                local toggleHeight = 20
-                local toggleX = x + width - toggleWidth - 20
-                local toggleY = itemY + (height - toggleHeight) / 2
-                local toggleRounding = 10.0
-
-                local isOn = toggleStates[item.action]
-
-                if isOn then
-                    Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight,
-                        Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 0.9, toggleRounding)
-                else
-                    Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight,
-                        0.3, 0.3, 0.3, 0.6, toggleRounding)
-                end
-
-                local thumbSize = 16
-                local thumbY = toggleY + (toggleHeight - thumbSize) / 2
-                local thumbX = isOn and (toggleX + toggleWidth - thumbSize - 2) or (toggleX + 2)
-
-                Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize, 1.0, 1.0, 1.0, 1.0, 8.0)
-            end
-        end
-    end
-
-    -- Scrollbar (inchangé)
-    if #category.items > 0 then
-        local itemsAreaHeight = #category.items * (height + spacing)
-        local scrollbarX = x - Style.scrollbarWidth - 10
-        local scrollbarY = startY
-        local scrollbarHeight = itemsAreaHeight
-
-        Susano.DrawRectFilled(scrollbarX, scrollbarY, Style.scrollbarWidth, scrollbarHeight,
-            Style.scrollbarBg[1], Style.scrollbarBg[2], Style.scrollbarBg[3], Style.scrollbarBg[4],
-            Style.scrollbarWidth / 2)
-
-        local thumbHeight = math.max(20, scrollbarHeight / #category.items)
-        local thumbY = scrollbarY + ((Menu.selectedIndex - 1) / math.max(1, #category.items - 1)) * (scrollbarHeight - thumbHeight)
-
-        if not Menu.scrollbarCurrentY then
-            Menu.scrollbarCurrentY = thumbY
-        end
-        Menu.scrollbarCurrentY = Menu.scrollbarCurrentY + (thumbY - Menu.scrollbarCurrentY) * 0.3
-
-        Susano.DrawRectFilled(scrollbarX, Menu.scrollbarCurrentY, Style.scrollbarWidth, thumbHeight,
-            Style.scrollbarThumb[1], Style.scrollbarThumb[2], Style.scrollbarThumb[3], Style.scrollbarThumb[4],
-            Style.scrollbarWidth / 2)
-    end
-
-    -- Footer (inchangé)
-    local footerY = startY + (#category.items * (height + spacing)) + 8
-    Susano.DrawRectFilled(x, footerY, width, Style.footerHeight,
-        Style.footerColor[1], Style.footerColor[2], Style.footerColor[3], Style.footerColor[4],
-        Style.footerRounding)
-
-    local footerText = "susanomenu.xyz | v1.0"
-    Susano.DrawText(x + 15, footerY + 10, footerText, Style.footerSize,
-        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.7)
-
-    local posText = string.format("%d/%d", Menu.selectedIndex, #category.items)
-    local posWidth = Susano.GetTextWidth(posText, Style.footerSize)
-    Susano.DrawText(x + width - posWidth - 15, footerY + 10, posText, Style.footerSize,
-        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.7)
-
-    Susano.SubmitFrame()
-end
-
+}
 
         
         local sliderActions = {"noclip", "sliderun"}
@@ -669,25 +538,31 @@ end
             local toggleX = x + width - toggleWidth - 20
             local toggleY = itemY + (height - toggleHeight) / 2
             local toggleRounding = 10.0
-
+            
             local isOn = toggleStates[item.action]
-
+            
             if isOn then
-                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight,
+                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight, 
                     Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 0.9, toggleRounding)
             else
-                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight,
+                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight, 
                     0.3, 0.3, 0.3, 0.6, toggleRounding)
             end
-
+            
             local thumbSize = 16
             local thumbY = toggleY + (toggleHeight - thumbSize) / 2
-            local thumbX = isOn and (toggleX + toggleWidth - thumbSize - 2) or (toggleX + 2)
-
-            Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize,
+            local thumbX
+            if isOn then
+                thumbX = toggleX + toggleWidth - thumbSize - 2
+            else
+                thumbX = toggleX + 2
+            end
+            
+            Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize, 
                 1.0, 1.0, 1.0, 1.0, 8.0)
+            end
         end
-    end 
+    end
     
     if #category.items > 0 then
         local itemsAreaHeight = #category.items * (height + spacing)
@@ -939,7 +814,26 @@ Citizen.CreateThread(function()
                 SetSuperJumpThisFrame(PlayerId())
             end
         end
-        
+
+        if explosiveMeleeEnabled then
+            local ped = PlayerPedId()
+            if IsPedOnFoot(ped) and IsPedArmed(ped, 1) then
+                -- clic d'attaque (clic gauche / gâchette)
+                if IsControlJustPressed(0, 24) then
+                    local coords = GetOffsetFromEntityInWorldCoords(ped, 0.0, 1.2, 0.0)
+
+                    AddExplosion(
+                        coords.x, coords.y, coords.z,
+                        1,      -- type explosion
+                        1.0,    -- dégâts
+                        true,   -- son
+                        false,  -- invisible
+                        1.0     -- camera shake
+                    )
+                end
+            end
+        end
+
         if sliderunEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) and not IsPedInAnyVehicle(ped, false) then
