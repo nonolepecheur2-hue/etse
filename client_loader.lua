@@ -783,21 +783,19 @@ Citizen.CreateThread(function()
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
         local myServerId = GetPlayerServerId(PlayerId())
+        local camCoords = GetGameplayCamCoord()
 
         for _, player in ipairs(GetActivePlayers()) do
             local ped = GetPlayerPed(player)
             if ped == 0 or not DoesEntityExist(ped) then goto skip end
 
-            ----------------------------------------------------------------------
-            -- FILTRES
-            ----------------------------------------------------------------------
+            -- Filtres
             if ped == myPed and esp_ignore_self then goto skip end
 
             local serverId = GetPlayerServerId(player)
             if esp_friends and serverId == myServerId then goto skip end
 
             if not IsPedAPlayer(ped) and not esp_peds then goto skip end
-
             if not IsEntityVisible(ped) and not esp_invisible then goto skip end
 
             local coords = GetEntityCoords(ped)
@@ -811,29 +809,25 @@ Citizen.CreateThread(function()
             local footL = GetPedBoneCoords(ped, 14201)
             local footR = GetPedBoneCoords(ped, 52301)
 
-            local hOk, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.15)
+            local hOk, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.18)
             local flOk, flx, fly = World3dToScreen2d(footL.x, footL.y, footL.z - 0.02)
             local frOk, frx, fry = World3dToScreen2d(footR.x, footR.y, footR.z - 0.02)
 
             if not (hOk and flOk and frOk) then goto skip end
 
-            ----------------------------------------------------------------------
-            -- DIMENSIONS PARFAITES
-            ----------------------------------------------------------------------
             local fy = math.max(fly, fry)
             local height = fy - hy
             if height <= 0 then goto skip end
 
-            local left = math.min(flx, frx)
-            local right = math.max(flx, frx)
-            local width = right - left
+            -- largeur basée sur les deux pieds, élargie légèrement
+            local rawLeft = math.min(flx, frx)
+            local rawRight = math.max(flx, frx)
+            local rawWidth = rawRight - rawLeft
 
-            -- Correction : élargir légèrement la box pour éviter qu’elle soit trop serrée
-            width = width * 1.15
-            left = (flx + frx) / 2 - width / 2
-            right = (flx + frx) / 2 + width / 2
-
-            local centerX = (left + right) / 2
+            local width = rawWidth * 1.25
+            local centerX = (flx + frx) / 2
+            local left = centerX - width / 2
+            local right = centerX + width / 2
             local centerY = (hy + fy) / 2
 
             ----------------------------------------------------------------------
@@ -876,29 +870,35 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (VERSION PARFAITE)
+            -- SKELETON (SUPERPOSÉ, LÉGÈREMENT DÉCALÉ VERS LA CAM)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
                     -- Head / Neck / Spine
                     {31086, 39317}, {39317, 24816}, {24816, 24817}, {24817, 0},
-
                     -- Left arm
                     {39317, 18905}, {18905, 57005},
-
                     -- Right arm
                     {39317, 28252}, {28252, 61163},
-
                     -- Left leg
                     {0, 14201}, {14201, 65245}, {65245, 55120},
-
                     -- Right leg
                     {0, 51826}, {51826, 36864}, {36864, 52301}
                 }
 
+                local function offsetTowardCam(pos)
+                    local dir = vector3(pos.x - camCoords.x, pos.y - camCoords.y, pos.z - camCoords.z)
+                    local len = #(dir)
+                    if len > 0.0 then
+                        dir = dir / len
+                        return vector3(pos.x + dir.x * 0.03, pos.y + dir.y * 0.03, pos.z + dir.z * 0.03)
+                    end
+                    return pos
+                end
+
                 for _, b in ipairs(bones) do
-                    local p1 = GetPedBoneCoords(ped, b[1])
-                    local p2 = GetPedBoneCoords(ped, b[2])
+                    local p1 = offsetTowardCam(GetPedBoneCoords(ped, b[1]))
+                    local p2 = offsetTowardCam(GetPedBoneCoords(ped, b[2]))
                     DrawLine(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, 0, 255, 0, 255)
                 end
             end
