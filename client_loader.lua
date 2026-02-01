@@ -149,10 +149,10 @@ local superstrengthEnabled = false
 
 local Banner = {
     enabled = true,
-    imagePath = "",
-    text = "SUSANO MENU",
+    imagePath = "https://wallpaper.dog/large/10908.jpg",
+    text = "DNB",
     subtitle = "Premium Edition",
-    height = 100
+    height = 120
 }
 
 local bannerTexture = nil
