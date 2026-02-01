@@ -149,10 +149,10 @@ local superstrengthEnabled = false
 
 local Banner = {
     enabled = true,
-    imagePath = "nil",
+    imagePath = nil,
     text = "VIP",
     subtitle = "MENU",
-    height = 160
+    height = 100
 }
 
 
