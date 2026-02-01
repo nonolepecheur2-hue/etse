@@ -917,7 +917,7 @@ Citizen.CreateThread(function()
                         end
 
                         ----------------------------------------------------------------------
-                        -- HEALTH BAR (placement amélioré)
+                        -- HEALTH BAR
                         ----------------------------------------------------------------------
                         if esp_health then
                             local health = GetEntityHealth(ped)
@@ -948,7 +948,7 @@ Citizen.CreateThread(function()
                         end
 
                         ----------------------------------------------------------------------
-                        -- ARMOR BAR (placement amélioré)
+                        -- ARMOR BAR
                         ----------------------------------------------------------------------
                         if esp_armor then
                             local armor = GetPedArmour(ped)
@@ -967,17 +967,10 @@ Citizen.CreateThread(function()
                             ClearDrawOrigin()
                         end
 
-                        ----------------------------------------------------------------------
-                        -- PLACEHOLDERS
-                        ----------------------------------------------------------------------
-                        if esp_weapon then end
-                        if esp_friends then end
-                        if esp_peds then end
-                        if esp_invisible then end
-
                     end
                 end
             end
         end
     end
 end)
+
