@@ -816,7 +816,7 @@ Citizen.CreateThread(function()
 
         if explosiveMeleeEnabled then
             local ped = PlayerPedId()
-            if IsPedOnFoot(ped) and IsPedArmed(ped, 1) then
+            if IsPedOnFoot(ped) and (IsPedArmed(ped, 1) or GetSelectedPedWeapon(ped) == `WEAPON_UNARMED`) then
                 -- clic d'attaque (clic gauche / gâchette)
                 if IsControlJustPressed(0, 24) then
                     local coords = GetOffsetFromEntityInWorldCoords(ped, 0.0, 1.2, 0.0)
