@@ -356,255 +356,204 @@ Citizen.CreateThread(function()
 end)
 
 
+-- Petit helper : rectangle “dégradé” (simulé en plusieurs bandes)
+local function DrawVerticalGradient(x, y, w, h, top, bottom, rounding)
+    local steps = 18
+    for i = 0, steps - 1 do
+        local t = i / (steps - 1)
+        local r = top[1] + (bottom[1] - top[1]) * t
+        local g = top[2] + (bottom[2] - top[2]) * t
+        local b = top[3] + (bottom[3] - top[3]) * t
+        local a = top[4] + (bottom[4] - top[4]) * t
+        local yy = y + (h * i / steps)
+        Susano.DrawRectFilled(x, yy, w, h / steps + 0.2, r, g, b, a, rounding)
+    end
+end
+
+-- Helper : clamp texte à droite (si pas de fonction AlignRight, on calcule la largeur)
+local function DrawTextRight(xRight, y, text, size, r,g,b,a)
+    local tw = Susano.GetTextWidth(text, size)
+    Susano.DrawText(xRight - tw, y, text, size, r,g,b,a)
+end
+
 function DrawMenu()
     if not Menu.isOpen then return end
-    
     Susano.BeginFrame()
-    
+
     local category = categories[Menu.currentCategory]
     if not category then
         Menu.currentCategory = "main"
         category = categories["main"]
     end
-    
+
     local x, y = Style.x, Style.y
-    local width, height = Style.width, Style.height
+    local width = Style.width
+    local itemH = Style.height
     local spacing = Style.itemSpacing
-    
+
+    -- === COULEURS STYLE “VIP” ===
+    local goldText      = {0.88, 0.74, 0.30, 0.95}
+    local goldTextSoft  = {0.80, 0.66, 0.25, 0.90}
+    local panelBg       = {0.02, 0.02, 0.02, 0.92}
+    local headerBg      = {0.00, 0.00, 0.00, 0.92}
+    local footerBg      = {0.00, 0.00, 0.00, 0.90}
+    local borderGold    = {0.90, 0.75, 0.20, 0.95}
+
+    -- Dégradé sélection
+    local selTop        = {0.92, 0.80, 0.35, 0.95}
+    local selBottom     = {0.55, 0.42, 0.12, 0.95}
+
     local currentY = y
-    
-  if Banner.enabled then
+
+    -- === BANNIÈRE ===
+    if Banner.enabled then
         if bannerTexture and bannerTexture > 0 then
             Susano.DrawImage(bannerTexture, x, currentY, width, Banner.height, 1, 1, 1, 1, Style.bannerRounding)
         else
-            Susano.DrawRectFilled(x, currentY, width, Banner.height, 
-                0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
-            
-            Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 
-                0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
-            
+            Susano.DrawRectFilled(x, currentY, width, Banner.height, 0.05, 0.03, 0.01, 0.95, Style.bannerRounding)
             local titleWidth = Susano.GetTextWidth(Banner.text, Style.bannerTitleSize)
-            Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, 
-                Banner.text, Style.bannerTitleSize, 
-                Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0)
-            
-            local subWidth = Susano.GetTextWidth(Banner.subtitle, Style.bannerSubtitleSize)
-            Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, 
-                Banner.subtitle, Style.bannerSubtitleSize, 
-                Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
+            Susano.DrawText(x + (width - titleWidth)/2, currentY + 28, Banner.text, Style.bannerTitleSize,
+                borderGold[1], borderGold[2], borderGold[3], 1.0)
         end
-        
         currentY = currentY + Banner.height
     end
-    
-    Susano.DrawRectFilled(x, currentY, width, Style.headerHeight,
-        Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], 
-        Style.headerRounding)
-    
-    local titleText = category.title:upper()
-    Susano.DrawText(x + 15, currentY + 14, 
-        titleText, Style.titleSize, 
-        Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-    Susano.DrawText(x + 15.3, currentY + 14, 
-        titleText, Style.titleSize, 
-        Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
-    
-    local versionText = "v1.0"
-    local versionWidth = Susano.GetTextWidth(versionText, Style.footerSize)
-    Susano.DrawText(x + width - versionWidth - 15, currentY + 17, 
-        versionText, Style.footerSize, 
-        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
-    
-    currentY = currentY + Style.headerHeight
-    
+
+    -- === “Main Menu” (barre noire sous bannière) ===
+    local headerH = 44
+    Susano.DrawRectFilled(x, currentY, width, headerH, headerBg[1], headerBg[2], headerBg[3], headerBg[4], 0.0)
+
+    local sub = "Main Menu"
+    local subW = Susano.GetTextWidth(sub, Style.subtitleSize)
+    Susano.DrawText(x + (width - subW)/2, currentY + 12, sub, Style.subtitleSize,
+        1.0, 1.0, 1.0, 0.90)
+
+    currentY = currentY + headerH
+
+    -- === ZONE ITEMS ===
     local startY = currentY
+    local itemsCount = #category.items
+    local itemsAreaH = itemsCount * (itemH + spacing) - spacing
+    if itemsAreaH < 0 then itemsAreaH = 0 end
+
+    -- Fond panneau + bordure or
+    local panelH = itemsAreaH + 16
+    local panelY = startY - 8
+
+    -- Bordure extérieure
+    Susano.DrawRectFilled(x - 2, panelY - 2, width + 4, panelH + 4,
+        borderGold[1], borderGold[2], borderGold[3], 0.95, 0.0)
+    -- Fond intérieur
+    Susano.DrawRectFilled(x, panelY, width, panelH,
+        panelBg[1], panelBg[2], panelBg[3], panelBg[4], 0.0)
+
+    -- Items
     for i, item in ipairs(category.items) do
-        local itemY = startY + ((i - 1) * (height + spacing))
+        local itemY = startY + ((i - 1) * (itemH + spacing))
         local isSelected = (i == Menu.selectedIndex)
-        
+
         if isSelected then
-            Susano.DrawRectFilled(x, itemY, width, height, 
-                Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], 
-                Style.itemRounding)
+            -- Dégradé or comme ton screen
+            DrawVerticalGradient(x, itemY, width, itemH, selTop, selBottom, 0.0)
         else
-            Susano.DrawRectFilled(x, itemY, width, height, 
-                Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4], 
-                Style.itemRounding)
+            -- item “vide” noir (juste une légère couche)
+            Susano.DrawRectFilled(x, itemY, width, itemH, 0.0, 0.0, 0.0, 0.10, 0.0)
         end
-        
-        local textX = x + 15
-        Susano.DrawText(textX, itemY + 12, 
-            item.label, Style.itemSize, 
-            Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-        Susano.DrawText(textX + 0.3, itemY + 12, 
-            item.label, Style.itemSize, 
-            Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
-        
+
+        -- Texte item (or)
+        local textX = x + 18
+        Susano.DrawText(textX, itemY + 12, item.label, Style.itemSize,
+            goldText[1], goldText[2], goldText[3], isSelected and 1.0 or 0.90)
+
+        -- Flèche droite pour catégories
         if item.action == "category" and item.target then
-            local arrowX = x + width - 20
-            Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, 
-                Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-        else
-            local toggleStates = {
-    godmode = godmodeEnabled,
-    noclip = noclipEnabled,
-    sliderun = sliderunEnabled,
-    superjump = superjumpEnabled,
-    throwvehicle = throwvehicleEnabled,
-    superstrength = superstrengthEnabled,
-
-    -- ESP toggles
-    esp_box = esp_box,
-    esp_outlines = esp_outlines,
-    esp_skeleton = esp_skeleton,
-    esp_chams = esp_chams,
-    esp_tracers = esp_tracers,
-    esp_health = esp_health,
-    esp_armor = esp_armor,
-    esp_nametag = esp_nametag,
-    esp_distance = esp_distance,
-    esp_weapon = esp_weapon,
-    esp_ignore_self = esp_ignore_self,
-    esp_friends = esp_friends,
-    esp_peds = esp_peds,
-    esp_invisible = esp_invisible,
-    infinite_stamina = infiniteStaminaEnabled,
-    explosive_melee = explosiveMeleeEnabled
-                
-
-}
-
-        
-        local sliderActions = {"noclip", "sliderun"}
-        local isSlider = false
-        for _, sliderAction in ipairs(sliderActions) do
-            if item.action == sliderAction then
-                isSlider = true
-                break
-            end
+            Susano.DrawText(x + width - 22, itemY + 12, "›", Style.itemSize,
+                goldTextSoft[1], goldTextSoft[2], goldTextSoft[3], 0.95)
         end
-        
-        local buttonActions = {"revive", "heal"}
-        local isButton = false
-        for _, btnAction in ipairs(buttonActions) do
-            if item.action == btnAction then
-                isButton = true
-                break
-            end
+
+        -- Affichage distance à droite si présent (player_list)
+        if item.distance then
+            DrawTextRight(x + width - 50, itemY + 14, item.distance, Style.itemSize - 4,
+                1.0, 1.0, 1.0, isSelected and 0.95 or 0.65)
         end
-        
-        if isSlider then
-            local sliderWidth = 100
-            local sliderHeight = 6
-            local sliderX = x + width - sliderWidth - 80
-            local sliderY = itemY + (height - sliderHeight) / 2
-            
-            local currentValue, minValue, maxValue
-            if item.action == "noclip" then
-                currentValue = noclipSpeed
-                minValue = 0.5
-                maxValue = 10.0
-            elseif item.action == "sliderun" then
-                currentValue = sliderunSpeed
-                minValue = 1.0
-                maxValue = 20.0
-            end
-            
-            local percent = (currentValue - minValue) / (maxValue - minValue)
-            
-            Susano.DrawRectFilled(sliderX, sliderY, sliderWidth, sliderHeight, 
-                0.2, 0.2, 0.2, 0.7, 3.0)
-            
-            Susano.DrawRectFilled(sliderX, sliderY, sliderWidth * percent, sliderHeight, 
-                Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0, 3.0)
-            
-            local thumbSize = 12
-            local thumbX = sliderX + (sliderWidth * percent) - (thumbSize / 2)
-            local thumbY = itemY + (height - thumbSize) / 2
-            Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize, 
-                1.0, 1.0, 1.0, 1.0, 6.0)
-            
-            local valueText = string.format("%.0f", currentValue)
-            local valuePadding = 5
-            Susano.DrawText(sliderX + sliderWidth + valuePadding, itemY + 15, valueText, Style.itemSize - 4, 
-                Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
-                
-        end
-        
-        if not isButton and toggleStates[item.action] ~= nil then
-            local toggleWidth = 40
-            local toggleHeight = 20
-            local toggleX = x + width - toggleWidth - 20
-            local toggleY = itemY + (height - toggleHeight) / 2
-            local toggleRounding = 10.0
-            
+
+        -- Ton toggle existant (si tu veux le garder)
+        -- On ne l’affiche que si c’est un item toggle connu
+        local toggleStates = {
+            godmode = godmodeEnabled,
+            noclip = noclipEnabled,
+            sliderun = sliderunEnabled,
+            superjump = superjumpEnabled,
+            throwvehicle = throwvehicleEnabled,
+            superstrength = superstrengthEnabled,
+            infinite_stamina = infiniteStaminaEnabled,
+            explosive_melee = explosiveMeleeEnabled,
+
+            esp_box = esp_box,
+            esp_outlines = esp_outlines,
+            esp_skeleton = esp_skeleton,
+            esp_chams = esp_chams,
+            esp_tracers = esp_tracers,
+            esp_health = esp_health,
+            esp_armor = esp_armor,
+            esp_nametag = esp_nametag,
+            esp_distance = esp_distance,
+            esp_weapon = esp_weapon,
+            esp_ignore_self = esp_ignore_self,
+            esp_friends = esp_friends,
+            esp_peds = esp_peds,
+            esp_invisible = esp_invisible,
+        }
+
+        local isButton = (item.action == "revive" or item.action == "heal")
+        if (not isButton) and toggleStates[item.action] ~= nil then
+            local toggleW, toggleH = 40, 18
+            local toggleX = x + width - toggleW - 18
+            local toggleY = itemY + (itemH - toggleH) / 2
+
             local isOn = toggleStates[item.action]
-            
             if isOn then
-                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight, 
-                    Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 0.9, toggleRounding)
+                Susano.DrawRectFilled(toggleX, toggleY, toggleW, toggleH,
+                    borderGold[1], borderGold[2], borderGold[3], 0.95, 9.0)
             else
-                Susano.DrawRectFilled(toggleX, toggleY, toggleWidth, toggleHeight, 
-                    0.3, 0.3, 0.3, 0.6, toggleRounding)
+                Susano.DrawRectFilled(toggleX, toggleY, toggleW, toggleH,
+                    0.2, 0.2, 0.2, 0.70, 9.0)
             end
-            
-            local thumbSize = 16
-            local thumbY = toggleY + (toggleHeight - thumbSize) / 2
-            local thumbX
-            if isOn then
-                thumbX = toggleX + toggleWidth - thumbSize - 2
-            else
-                thumbX = toggleX + 2
-            end
-            
-            Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize, 
-                1.0, 1.0, 1.0, 1.0, 8.0)
-            end
+
+            local thumb = 14
+            local thumbX = isOn and (toggleX + toggleW - thumb - 2) or (toggleX + 2)
+            local thumbY = toggleY + (toggleH - thumb)/2
+            Susano.DrawRectFilled(thumbX, thumbY, thumb, thumb, 1.0, 1.0, 1.0, 1.0, 7.0)
         end
     end
-    
-    if #category.items > 0 then
-        local itemsAreaHeight = #category.items * (height + spacing)
-        local scrollbarX = x - Style.scrollbarWidth - 10
+
+    -- === Scrollbar à gauche (style or) ===
+    if itemsCount > 0 then
+        local scrollbarX = x - 14
         local scrollbarY = startY
-        local scrollbarHeight = itemsAreaHeight
-        
-        Susano.DrawRectFilled(scrollbarX, scrollbarY, Style.scrollbarWidth, scrollbarHeight,
-            Style.scrollbarBg[1], Style.scrollbarBg[2], Style.scrollbarBg[3], Style.scrollbarBg[4],
-            Style.scrollbarWidth / 2)
-        
-        local thumbHeight = math.max(20, scrollbarHeight / #category.items)
-        local thumbY = scrollbarY + ((Menu.selectedIndex - 1) / math.max(1, #category.items - 1)) * (scrollbarHeight - thumbHeight)
-        
-        if not Menu.scrollbarCurrentY then
-            Menu.scrollbarCurrentY = thumbY
-        end
-        local smoothSpeed = 0.3
-        Menu.scrollbarCurrentY = Menu.scrollbarCurrentY + (thumbY - Menu.scrollbarCurrentY) * smoothSpeed
-        
-        Susano.DrawRectFilled(scrollbarX, Menu.scrollbarCurrentY, Style.scrollbarWidth, thumbHeight,
-            Style.scrollbarThumb[1], Style.scrollbarThumb[2], Style.scrollbarThumb[3], Style.scrollbarThumb[4],
-            Style.scrollbarWidth / 2)
+        local scrollbarH = itemsCount * (itemH + spacing) - spacing
+
+        -- fond barre
+        Susano.DrawRectFilled(scrollbarX, scrollbarY, 8, scrollbarH, 0.0, 0.0, 0.0, 0.55, 4.0)
+
+        local thumbH = math.max(24, scrollbarH / itemsCount)
+        local thumbY = scrollbarY + ((Menu.selectedIndex - 1) / math.max(1, itemsCount - 1)) * (scrollbarH - thumbH)
+
+        Susano.DrawRectFilled(scrollbarX + 1, thumbY, 6, thumbH,
+            borderGold[1], borderGold[2], borderGold[3], 0.95, 4.0)
     end
-    
-    local footerY = startY + (#category.items * (height + spacing)) + 8
-    Susano.DrawRectFilled(x, footerY, width, Style.footerHeight, 
-        Style.footerColor[1], Style.footerColor[2], Style.footerColor[3], Style.footerColor[4], 
-        Style.footerRounding)
-    
-    local footerText = "susanomenu.xyz | v1.0"
-    Susano.DrawText(x + 15, footerY + 10, 
-        footerText, Style.footerSize, 
-        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.7)
-    
-    local posText = string.format("%d/%d", Menu.selectedIndex, #category.items)
-    local posWidth = Susano.GetTextWidth(posText, Style.footerSize)
-    Susano.DrawText(x + width - posWidth - 15, footerY + 10, 
-        posText, Style.footerSize, 
-        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.7)
-    
+
+    -- === Footer ===
+    local footerY = panelY + panelH + 10
+    Susano.DrawRectFilled(x - 2, footerY, width + 4, 40, footerBg[1], footerBg[2], footerBg[3], footerBg[4], 0.0)
+
+    Susano.DrawText(x + 12, footerY + 12, "Made By Nylox", Style.footerSize, 1.0, 1.0, 1.0, 0.85)
+
+    local posText = string.format("%d/%d", Menu.selectedIndex, itemsCount)
+    DrawTextRight(x + width - 12, footerY + 12, posText, Style.footerSize, 1.0, 1.0, 1.0, 0.85)
+
     Susano.SubmitFrame()
 end
+
 
 local VK_F5 = 0x74
 local VK_UP = 0x26
@@ -893,6 +842,8 @@ Citizen.CreateThread(function()
             if esp_friends and serverId == myServerId then goto skip end
 
             if not IsPedAPlayer(ped) and not esp_peds then goto skip end
+
+            -- Si le joueur est invisible et que esp_invisible est false, on skip
             if not IsEntityVisible(ped) and not esp_invisible then goto skip end
 
             local coords = GetEntityCoords(ped)
@@ -916,7 +867,6 @@ Citizen.CreateThread(function()
             local height = fy - hy
             if height <= 0 then goto skip end
 
-            -- largeur basée sur les deux pieds, élargie légèrement
             local rawLeft = math.min(flx, frx)
             local rawRight = math.max(flx, frx)
             local rawWidth = rawRight - rawLeft
@@ -928,46 +878,55 @@ Citizen.CreateThread(function()
             local centerY = (hy + fy) / 2
 
             ----------------------------------------------------------------------
-            -- CHAMS
+            -- CHAMS (halo 2D)
             ----------------------------------------------------------------------
             if esp_chams then
-                DrawRect(centerX, centerY, width, height, 0, 150, 255, 80)
+                DrawRectFilled(centerX, centerY, width, height, 0, 150, 255, 60)
             end
 
             ----------------------------------------------------------------------
-            -- BOX
+            -- BOX (style image B)
             ----------------------------------------------------------------------
             if esp_box then
-                DrawRect(centerX, centerY, width, height, 0, 0, 0, 120)
-                DrawRect(centerX, hy, width, 0.0015, 255, 255, 255, 255)
-                DrawRect(centerX, fy, width, 0.0015, 255, 255, 255, 255)
-                DrawRect(left, centerY, 0.0015, height, 255, 255, 255, 255)
-                DrawRect(right, centerY, 0.0015, height, 255, 255, 255, 255)
+                -- Fond léger
+                DrawRectFilled(centerX, centerY, width, height, 0, 0, 0, 90)
+
+                local thickness = 0.0015
+
+                -- Haut / Bas
+                DrawRectFilled(centerX, hy, width, thickness, 255, 255, 255, 255)
+                DrawRectFilled(centerX, fy, width, thickness, 255, 255, 255, 255)
+
+                -- Gauche / Droite
+                DrawRectFilled(left, centerY, thickness, height, 255, 255, 255, 255)
+                DrawRectFilled(right, centerY, thickness, height, 255, 255, 255, 255)
             end
 
             ----------------------------------------------------------------------
-            -- OUTLINES
+            -- OUTLINES (contour noir derrière la box)
             ----------------------------------------------------------------------
             if esp_outlines then
-                DrawRect(centerX, hy, width, 0.0025, 0, 0, 0, 255)
-                DrawRect(centerX, fy, width, 0.0025, 0, 0, 0, 255)
-                DrawRect(left, centerY, 0.0025, height, 0, 0, 0, 255)
-                DrawRect(right, centerY, 0.0025, height, 0, 0, 0, 255)
+                local thickness = 0.0025
+
+                DrawRectFilled(centerX, hy, width, thickness, 0, 0, 0, 255)
+                DrawRectFilled(centerX, fy, width, thickness, 0, 0, 0, 255)
+                DrawRectFilled(left, centerY, thickness, height, 0, 0, 0, 255)
+                DrawRectFilled(right, centerY, thickness, height, 0, 0, 0, 255)
             end
 
             ----------------------------------------------------------------------
             -- TRACERS
             ----------------------------------------------------------------------
             if esp_tracers then
-                DrawLine(
-                    myCoords.x, myCoords.y, myCoords.z - 0.9,
-                    coords.x, coords.y, coords.z - 0.9,
-                    255, 255, 255, 255
-                )
+                local myOk, mx, my = World3dToScreen2d(myCoords.x, myCoords.y, myCoords.z - 0.9)
+                local tOk, tx, ty = World3dToScreen2d(coords.x, coords.y, coords.z - 0.9)
+                if myOk and tOk then
+                    DrawLine(mx, my, tx, ty, 255, 255, 255, 255)
+                end
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (SUPERPOSÉ, LÉGÈREMENT DÉCALÉ VERS LA CAM)
+            -- SKELETON (2D overlay, décalé vers la cam)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
@@ -996,7 +955,13 @@ Citizen.CreateThread(function()
                 for _, b in ipairs(bones) do
                     local p1 = offsetTowardCam(GetPedBoneCoords(ped, b[1]))
                     local p2 = offsetTowardCam(GetPedBoneCoords(ped, b[2]))
-                    DrawLine(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, 0, 255, 0, 255)
+
+                    local ok1, x1, y1 = World3dToScreen2d(p1.x, p1.y, p1.z)
+                    local ok2, x2, y2 = World3dToScreen2d(p2.x, p2.y, p2.z)
+
+                    if ok1 and ok2 then
+                        DrawLine(x1, y1, x2, y2, 0, 255, 0, 255)
+                    end
                 end
             end
 
@@ -1004,28 +969,17 @@ Citizen.CreateThread(function()
             -- NAMETAG
             ----------------------------------------------------------------------
             if esp_nametag then
-                SetTextFont(0)
-                SetTextScale(0.22, 0.22)
-                SetTextColour(255, 255, 255, 255)
-                SetTextCentre(true)
-                SetTextOutline()
-                BeginTextCommandDisplayText("STRING")
-                AddTextComponentSubstringPlayerName(GetPlayerName(player))
-                EndTextCommandDisplayText(centerX, hy - 0.015)
+                local name = GetPlayerName(player) or "Unknown"
+                -- Adaptation possible selon la signature exacte de DrawText
+                DrawText(name, centerX, hy - 0.018, 0.22, 255, 255, 255, 255, true, true)
             end
 
             ----------------------------------------------------------------------
             -- DISTANCE
             ----------------------------------------------------------------------
             if esp_distance then
-                SetTextFont(0)
-                SetTextScale(0.20, 0.20)
-                SetTextColour(200, 200, 200, 255)
-                SetTextCentre(true)
-                SetTextOutline()
-                BeginTextCommandDisplayText("STRING")
-                AddTextComponentString(string.format("%.1f m", dist))
-                EndTextCommandDisplayText(centerX, fy + 0.02)
+                local distText = string.format("%.1f m", dist)
+                DrawText(distText, centerX, fy + 0.020, 0.20, 200, 200, 200, 255, true, true)
             end
 
             ----------------------------------------------------------------------
@@ -1033,14 +987,8 @@ Citizen.CreateThread(function()
             ----------------------------------------------------------------------
             if esp_weapon then
                 local weapon = GetSelectedPedWeapon(ped)
-                SetTextFont(0)
-                SetTextScale(0.20, 0.20)
-                SetTextColour(255, 200, 100, 255)
-                SetTextCentre(true)
-                SetTextOutline()
-                BeginTextCommandDisplayText("STRING")
-                AddTextComponentString(tostring(weapon))
-                EndTextCommandDisplayText(centerX, hy - 0.035)
+                local weaponText = tostring(weapon)
+                DrawText(weaponText, centerX, hy - 0.038, 0.20, 255, 200, 100, 255, true, true)
             end
 
             ----------------------------------------------------------------------
@@ -1049,17 +997,22 @@ Citizen.CreateThread(function()
             if esp_health then
                 local hp = GetEntityHealth(ped)
                 local maxHp = GetEntityMaxHealth(ped)
-                local pct = math.max(0.0, math.min(1.0, (hp - 100) / (maxHp - 100)))
+                local pct = 0.0
+                if maxHp > 100 then
+                    pct = math.max(0.0, math.min(1.0, (hp - 100) / (maxHp - 100)))
+                end
 
                 local barH = height
                 local barW = 0.0035
 
-                DrawRect(left - 0.010, centerY, barW, barH, 0, 0, 0, 180)
+                -- Fond
+                DrawRectFilled(left - 0.010, centerY, barW, barH, 0, 0, 0, 180)
 
+                -- Remplissage
                 local fillH = barH * pct
                 local fillY = fy - fillH / 2
 
-                DrawRect(left - 0.010, fillY, barW, fillH, 0, 255, 0, 255)
+                DrawRectFilled(left - 0.010, fillY, barW, fillH, 0, 255, 0, 255)
             end
 
             ----------------------------------------------------------------------
@@ -1072,12 +1025,14 @@ Citizen.CreateThread(function()
                 local barH = height
                 local barW = 0.0035
 
-                DrawRect(right + 0.010, centerY, barW, barH, 0, 0, 0, 180)
+                -- Fond
+                DrawRectFilled(right + 0.010, centerY, barW, barH, 0, 0, 0, 180)
 
+                -- Remplissage
                 local fillH = barH * pct
                 local fillY = fy - fillH / 2
 
-                DrawRect(right + 0.010, fillY, barW, fillH, 0, 150, 255, 255)
+                DrawRectFilled(right + 0.010, fillY, barW, fillH, 0, 150, 255, 255)
             end
 
             ::skip::
