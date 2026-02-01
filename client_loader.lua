@@ -58,8 +58,7 @@ local categories = {
         items = {
             {label = "Throw From Vehicle", action = "throwvehicle"},
             {label = "Super Strength", action = "superstrength"},
-            {label = "Explosive Melee", action = "explosive_melee
-"}
+            {label = "Explosive Melee", action = "explosive_melee"}
             
         }
     },
