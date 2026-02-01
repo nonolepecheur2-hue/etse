@@ -181,6 +181,7 @@ local sliderunSpeed = 5.0
 local superjumpEnabled = false
 local throwvehicleEnabled = false
 local superstrengthEnabled = false
+local invisibleEnabled = false
 
 local Banner = {
     enabled = true,
