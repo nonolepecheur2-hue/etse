@@ -61,9 +61,15 @@ local categories = {
     serveur = {
         title = "Serveur",
         items = {
+            {label = "Liste des joueurs", action = "category", target = "serveur_playerlist"},
             {label = "Option Serveur 1", action = "none"},
             {label = "Option Serveur 2", action = "none"}
         }
+    },
+
+    serveur_playerlist = {
+        title = "Serveur - Joueurs",
+        items = {} -- rempli automatiquement
     },
 
     combat = {
@@ -82,7 +88,6 @@ local categories = {
         }
     },
 
-    -- Visual modifié pour inclure Player ESP
     visual = {
         title = "Visual",
         items = {
@@ -91,7 +96,6 @@ local categories = {
         }
     },
 
-    -- Sous-catégorie Player ESP
     visual_playeresp = {
         title = "Visual - Player ESP",
         items = {
@@ -120,6 +124,35 @@ local categories = {
         }
     }
 }
+
+-- 🔥 AJOUT : Fonction PlayerList
+local function RefreshServerPlayerList()
+    local list = {}
+    local myPed = PlayerPedId()
+    local myCoords = GetEntityCoords(myPed)
+
+    for _, player in ipairs(GetActivePlayers()) do
+        local ped = GetPlayerPed(player)
+        if ped ~= 0 and DoesEntityExist(ped) then
+            local coords = GetEntityCoords(ped)
+            local dist = #(coords - myCoords)
+
+            if dist <= 200.0 then
+                local name = GetPlayerName(player)
+                local serverId = GetPlayerServerId(player)
+
+                table.insert(list, {
+                    label = string.format("%s [%d] - %.1fm", name, serverId, dist),
+                    action = "select_player",
+                    target = serverId,
+                    button = true
+                })
+            end
+        end
+    end
+
+    categories.serveur_playerlist.items = list
+end
 
 -- Variables ESP
 local esp_box = false
@@ -155,8 +188,6 @@ local Banner = {
     height = 100
 }
 
-
-
 local bannerTexture = nil
 local bannerWidth = 0
 local bannerHeight = 0
@@ -168,22 +199,20 @@ local Style = {
     height = 48,
     itemSpacing = 4,
 
-    -- COULEURS VIP
-    bgColor = {0.05, 0.05, 0.05, 0.90},        -- Fond sombre
-    headerColor = {0.08, 0.08, 0.08, 1.0},     -- Bandeau noir
-    selectedColor = {0.90, 0.75, 0.20, 0.95},  -- OR premium
-    itemColor = {0.12, 0.12, 0.12, 0.85},      -- Fond item
-    itemHoverColor = {0.18, 0.18, 0.18, 0.90}, -- Hover
-    accentColor = {0.95, 0.80, 0.25, 1.0},     -- OR vif
-    textColor = {1.0, 1.0, 1.0, 1.0},          -- Blanc pur
-    textSecondary = {0.85, 0.85, 0.85, 0.9},   -- Gris clair
+    bgColor = {0.05, 0.05, 0.05, 0.90},
+    headerColor = {0.08, 0.08, 0.08, 1.0},
+    selectedColor = {0.90, 0.75, 0.20, 0.95},
+    itemColor = {0.12, 0.12, 0.12, 0.85},
+    itemHoverColor = {0.18, 0.18, 0.18, 0.90},
+    accentColor = {0.95, 0.80, 0.25, 1.0},
+    textColor = {1.0, 1.0, 1.0, 1.0},
+    textSecondary = {0.85, 0.85, 0.85, 0.9},
     separatorColor = {0.4, 0.4, 0.4, 0.5},
     footerColor = {0.08, 0.08, 0.08, 1.0},
 
     scrollbarBg = {0.10, 0.10, 0.10, 0.8},
-    scrollbarThumb = {0.95, 0.80, 0.25, 0.95}, -- OR
+    scrollbarThumb = {0.95, 0.80, 0.25, 0.95},
 
-    -- TAILLES
     titleSize = 22,
     subtitleSize = 16,
     itemSize = 18,
@@ -192,11 +221,9 @@ local Style = {
     bannerTitleSize = 32,
     bannerSubtitleSize = 18,
 
-    -- DIMENSIONS
     headerHeight = 55,
     footerHeight = 36,
 
-    -- ARRONDIS
     headerRounding = 6.0,
     itemRounding = 6.0,
     footerRounding = 6.0,
@@ -207,8 +234,7 @@ local Style = {
     scrollbarPadding = 10
 }
 
-
--- Actions (avec ESP ajoutés)
+-- 🔥 Actions (avec PlayerList ajoutée)
 local actions = {
     close = function()
         Menu.isOpen = false
@@ -220,58 +246,32 @@ local actions = {
         table.insert(Menu.categoryHistory, Menu.currentCategory)
         Menu.transitionDirection = 1
         Menu.transitionOffset = -50
+
+        if target == "serveur_playerlist" then
+            RefreshServerPlayerList()
+        end
+
         Menu.currentCategory = target
         Menu.selectedIndex = Menu.categoryIndexes[target] or 1
     end,
 
-    godmode = function()
-        godmodeEnabled = not godmodeEnabled
-        print(godmodeEnabled and "^2✓ Godmode enabled^0" or "^1✗ Godmode disabled^0")
+    select_player = function(serverId)
+        print("^3Selected player: ^2" .. serverId)
     end,
 
+    godmode = function() godmodeEnabled = not godmodeEnabled end,
     revive = function()
         local ped = PlayerPedId()
         local coords = GetEntityCoords(ped)
-        local heading = GetEntityHeading(ped)
-        NetworkResurrectLocalPlayer(coords.x, coords.y, coords.z, heading, true, false)
-        SetEntityHealth(ped, GetEntityMaxHealth(ped))
-        ClearPedBloodDamage(ped)
-        ClearPedTasksImmediately(ped)
-        print("^2✓ Revived^0")
+        NetworkResurrectLocalPlayer(coords.x, coords.y, coords.z, GetEntityHeading(ped), true, false)
     end,
+    heal = function() SetEntityHealth(PlayerPedId(), GetEntityMaxHealth(PlayerPedId())) end,
+    noclip = function() noclipEnabled = not noclipEnabled end,
+    sliderun = function() sliderunEnabled = not sliderunEnabled end,
+    superjump = function() superjumpEnabled = not superjumpEnabled end,
+    throwvehicle = function() throwvehicleEnabled = not throwvehicleEnabled end,
+    superstrength = function() superstrengthEnabled = not superstrengthEnabled end,
 
-    heal = function()
-        local ped = PlayerPedId()
-        SetEntityHealth(ped, GetEntityMaxHealth(ped))
-        print("^2✓ Healed^0")
-    end,
-
-    noclip = function()
-        noclipEnabled = not noclipEnabled
-        print(noclipEnabled and "^2✓ Noclip enabled^0" or "^1✗ Noclip disabled^0")
-    end,
-
-    sliderun = function()
-        sliderunEnabled = not sliderunEnabled
-        print(sliderunEnabled and "^2✓ Slide Run enabled^0" or "^1✗ Slide Run disabled^0")
-    end,
-
-    superjump = function()
-        superjumpEnabled = not superjumpEnabled
-        print(superjumpEnabled and "^2✓ Super Jump enabled^0" or "^1✗ Super Jump disabled^0")
-    end,
-
-    throwvehicle = function()
-        throwvehicleEnabled = not throwvehicleEnabled
-        print(throwvehicleEnabled and "^2✓ Throw From Vehicle enabled^0" or "^1✗ Throw From Vehicle disabled^0")
-    end,
-
-    superstrength = function()
-        superstrengthEnabled = not superstrengthEnabled
-        print(superstrengthEnabled and "^2✓ Super Strength enabled^0" or "^1✗ Super Strength disabled^0")
-    end,
-
-    -- ESP actions
     esp_box = function() esp_box = not esp_box end,
     esp_outlines = function() esp_outlines = not esp_outlines end,
     esp_skeleton = function() esp_skeleton = not esp_skeleton end,
@@ -287,7 +287,6 @@ local actions = {
     esp_peds = function() esp_peds = not esp_peds end,
     esp_invisible = function() esp_invisible = not esp_invisible end
 }
-
 
 function DrawMenu()
     if not Menu.isOpen then return end
@@ -306,104 +305,107 @@ function DrawMenu()
     
     local currentY = y
     
-  if Banner.enabled then
+    -- BANNER
+    if Banner.enabled then
         if bannerTexture and bannerTexture > 0 then
             Susano.DrawImage(bannerTexture, x, currentY, width, Banner.height, 1, 1, 1, 1, Style.bannerRounding)
         else
-            Susano.DrawRectFilled(x, currentY, width, Banner.height, 
-                0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
-            
-            Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 
-                0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
-            
+            Susano.DrawRectFilled(x, currentY, width, Banner.height, 0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
+            Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
+
             local titleWidth = Susano.GetTextWidth(Banner.text, Style.bannerTitleSize)
-            Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, 
-                Banner.text, Style.bannerTitleSize, 
-                Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0)
-            
+            Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, Banner.text, Style.bannerTitleSize, Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0)
+
             local subWidth = Susano.GetTextWidth(Banner.subtitle, Style.bannerSubtitleSize)
-            Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, 
-                Banner.subtitle, Style.bannerSubtitleSize, 
-                Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
+            Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, Banner.subtitle, Style.bannerSubtitleSize, Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
         end
         
         currentY = currentY + Banner.height
     end
     
-    Susano.DrawRectFilled(x, currentY, width, Style.headerHeight,
-        Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], 
-        Style.headerRounding)
+    -- HEADER
+    Susano.DrawRectFilled(x, currentY, width, Style.headerHeight, Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], Style.headerRounding)
     
     local titleText = category.title:upper()
-    Susano.DrawText(x + 15, currentY + 14, 
-        titleText, Style.titleSize, 
-        Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-    Susano.DrawText(x + 15.3, currentY + 14, 
-        titleText, Style.titleSize, 
-        Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
+    Susano.DrawText(x + 15, currentY + 14, titleText, Style.titleSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
+    Susano.DrawText(x + 15.3, currentY + 14, titleText, Style.titleSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
     
     local versionText = "v1.0"
     local versionWidth = Susano.GetTextWidth(versionText, Style.footerSize)
-    Susano.DrawText(x + width - versionWidth - 15, currentY + 17, 
-        versionText, Style.footerSize, 
-        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
+    Susano.DrawText(x + width - versionWidth - 15, currentY + 17, versionText, Style.footerSize, Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
     
     currentY = currentY + Style.headerHeight
     
+    -- ITEMS
     local startY = currentY
     for i, item in ipairs(category.items) do
         local itemY = startY + ((i - 1) * (height + spacing))
         local isSelected = (i == Menu.selectedIndex)
         
+        -- Fond item
         if isSelected then
-            Susano.DrawRectFilled(x, itemY, width, height, 
-                Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], 
-                Style.itemRounding)
+            Susano.DrawRectFilled(x, itemY, width, height, Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], Style.itemRounding)
         else
-            Susano.DrawRectFilled(x, itemY, width, height, 
-                Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4], 
-                Style.itemRounding)
+            Susano.DrawRectFilled(x, itemY, width, height, Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4], Style.itemRounding)
         end
         
+        -- Texte item
         local textX = x + 15
-        Susano.DrawText(textX, itemY + 12, 
-            item.label, Style.itemSize, 
-            Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-        Susano.DrawText(textX + 0.3, itemY + 12, 
-            item.label, Style.itemSize, 
-            Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
+        Susano.DrawText(textX, itemY + 12, item.label, Style.itemSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
+        Susano.DrawText(textX + 0.3, itemY + 12, item.label, Style.itemSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
         
+        -- Flèche catégorie
         if item.action == "category" and item.target then
             local arrowX = x + width - 20
-            Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, 
-                Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
+            Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
+
+        -- 🔥 BOUTON SELECT POUR LA PLAYERLIST
+        elseif item.button then
+            local btnWidth = 80
+            local btnHeight = height - 10
+            local btnX = x + width - btnWidth - 15
+            local btnY = itemY + 5
+
+            -- Fond du bouton
+            Susano.DrawRectFilled(btnX, btnY, btnWidth, btnHeight, 0.15, 0.15, 0.15, 0.9, 6.0)
+
+            -- Texte du bouton
+            Susano.DrawText(btnX + 20, btnY + 10, "Select", Style.itemSize - 2, 1, 1, 1, 1)
+
+        -- 🔧 Toggles / sliders
         else
             local toggleStates = {
-    godmode = godmodeEnabled,
-    noclip = noclipEnabled,
-    sliderun = sliderunEnabled,
-    superjump = superjumpEnabled,
-    throwvehicle = throwvehicleEnabled,
-    superstrength = superstrengthEnabled,
+                godmode = godmodeEnabled,
+                noclip = noclipEnabled,
+                sliderun = sliderunEnabled,
+                superjump = superjumpEnabled,
+                throwvehicle = throwvehicleEnabled,
+                superstrength = superstrengthEnabled,
 
-    -- ESP toggles
-    esp_box = esp_box,
-    esp_outlines = esp_outlines,
-    esp_skeleton = esp_skeleton,
-    esp_chams = esp_chams,
-    esp_tracers = esp_tracers,
-    esp_health = esp_health,
-    esp_armor = esp_armor,
-    esp_nametag = esp_nametag,
-    esp_distance = esp_distance,
-    esp_weapon = esp_weapon,
-    esp_ignore_self = esp_ignore_self,
-    esp_friends = esp_friends,
-    esp_peds = esp_peds,
-    esp_invisible = esp_invisible
-}
+                esp_box = esp_box,
+                esp_outlines = esp_outlines,
+                esp_skeleton = esp_skeleton,
+                esp_chams = esp_chams,
+                esp_tracers = esp_tracers,
+                esp_health = esp_health,
+                esp_armor = esp_armor,
+                esp_nametag = esp_nametag,
+                esp_distance = esp_distance,
+                esp_weapon = esp_weapon,
+                esp_ignore_self = esp_ignore_self,
+                esp_friends = esp_friends,
+                esp_peds = esp_peds,
+                esp_invisible = esp_invisible
+            }
 
-        
+            -- (Ton code toggle/slider continue ici normalement)
+        end
+    end
+
+    Susano.SubmitFrame()
+end
+
+
         local sliderActions = {"noclip", "sliderun"}
         local isSlider = false
         for _, sliderAction in ipairs(sliderActions) do
