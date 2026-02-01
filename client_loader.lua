@@ -742,18 +742,7 @@ Citizen.CreateThread(function()
                 SetSuperJumpThisFrame(PlayerId())
             end
         end
-        if invisibleEnabled then
-            local ped = PlayerPedId()
-            SetEntityVisible(ped, false, false)
-            SetEntityAlpha(ped, 0, false)
-            SetPedCanRagdoll(ped, false)
-        else
-            local ped = PlayerPedId()
-            SetEntityVisible(ped, true, false)
-            SetEntityAlpha(ped, 255, false)
-            SetPedCanRagdoll(ped, true)
-        end
-
+        
         if sliderunEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) and not IsPedInAnyVehicle(ped, false) then
@@ -765,6 +754,16 @@ Citizen.CreateThread(function()
                     local forwardY = math.cos(radians) * sliderunSpeed
                     SetEntityVelocity(ped, forwardX, forwardY, velocity.z)
                 end
+            end
+
+            if invisibleEnabled then
+                local ped = PlayerPedId()
+                SetEntityVisible(ped, false, false)
+                SetEntityAlpha(ped, 0, false)
+            else
+                local ped = PlayerPedId()
+                SetEntityVisible(ped, true, false)
+                SetEntityAlpha(ped, 255, false)
             end
         end
     end
