@@ -774,240 +774,160 @@ Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
 
+        -- Si aucun ESP n'est activé, on skip pour perf
+        if not (esp_box or esp_skeleton or esp_tracers or esp_nametag or esp_distance or esp_health or esp_armor) then
+            goto continue
+        end
+
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
         local players = GetActivePlayers()
 
         for _, player in ipairs(players) do
             local ped = GetPlayerPed(player)
+            if ped == 0 or not DoesEntityExist(ped) then goto skip end
+            if ped == myPed and esp_ignore_self then goto skip end
 
-            if ped ~= 0 and DoesEntityExist(ped) then
+            local coords = GetEntityCoords(ped)
+            local dist = #(coords - myCoords)
+            if dist > 300.0 then goto skip end
 
-                if ped ~= myPed or esp_ignore_self == false then
+            ----------------------------------------------------------------------
+            -- PROJECTION 2D (HEAD / FEET)
+            ----------------------------------------------------------------------
+            local head = GetPedBoneCoords(ped, 31086)
+            local feet = GetPedBoneCoords(ped, 0)
 
-                    local coords = GetEntityCoords(ped)
-                    local dist = #(coords - myCoords)
+            local hOnScreen, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.25)
+            local fOnScreen, fx, fy = World3dToScreen2d(feet.x, feet.y, feet.z - 0.1)
 
-                    if dist <= 200.0 then
+            if not (hOnScreen and fOnScreen) then goto skip end
 
-                        ----------------------------------------------------------------------
-                        -- BOX ESP
-                        ----------------------------------------------------------------------
-                        if esp_box then
-                            DrawMarker(
-                                2, -- RECTANGLE / CUBE
-                                coords.x, coords.y, coords.z + 1.0,
-                                0.0, 0.0, 0.0,
-                                0.0, 0.0, 0.0,
-                                0.6, 0.6, 1.8, -- largeur, profondeur, hauteur
-                                255, 255, 255, 150,
-                                false, true, 2, false, nil, nil, false
-                            )
-                        end
+            local height = (fy - hy)
+            if height <= 0 then goto skip end
 
+            local width = height * 0.45
+            local left = hx - width
+            local right = hx + width
 
+            ----------------------------------------------------------------------
+            -- BOX 2D (CORNERS) - Susano.DrawLine
+            ----------------------------------------------------------------------
+            if esp_box then
+                local r, g, b, a = 255, 255, 255, 255
+                local corner = height * 0.20
 
-                        ----------------------------------------------------------------------
-                        -- SKELETON ESP (FIXED)
-                        ----------------------------------------------------------------------
-                        if esp_skeleton then
-                            local bones = {
-                                -- Head and Neck
-                                {31086, 11816},  -- Head to Neck
-                                {11816, 1},      -- Neck to Spine 2
-                                {1, 0},          -- Spine 2 to Pelvis
+                -- Top left
+                Susano.DrawLine(left, hy, 0, left + corner, hy, 0, r, g, b, a)
+                Susano.DrawLine(left, hy, 0, left, hy + corner, 0, r, g, b, a)
 
-                                -- Left Arm
-                                {11816, 13612},  -- Neck to Left Shoulder
-                                {13612, 33391},  -- Left Shoulder to Left Elbow
-                                {33391, 57005},  -- Left Elbow to Left Wrist
-                                {57005, 58271},  -- Left Wrist to Left Hand
+                -- Top right
+                Susano.DrawLine(right, hy, 0, right - corner, hy, 0, r, g, b, a)
+                Susano.DrawLine(right, hy, 0, right, hy + corner, 0, r, g, b, a)
 
-                                -- Right Arm
-                                {11816, 24818},  -- Neck to Right Shoulder
-                                {24818, 25457},  -- Right Shoulder to Right Elbow
-                                {25457, 61163},  -- Right Elbow to Right Wrist
-                                {61163, 36029},  -- Right Wrist to Right Hand
+                -- Bottom left
+                Susano.DrawLine(left, fy, 0, left + corner, fy, 0, r, g, b, a)
+                Susano.DrawLine(left, fy, 0, left, fy - corner, 0, r, g, b, a)
 
-                                -- Left Leg
-                                {0, 63931},      -- Pelvis to Left Hip
-                                {63931, 6442},   -- Left Hip to Left Knee
-                                {6442, 2961},    -- Left Knee to Left Ankle
-                                {2961, 14201},   -- Left Ankle to Left Foot
+                -- Bottom right
+                Susano.DrawLine(right, fy, 0, right - corner, fy, 0, r, g, b, a)
+                Susano.DrawLine(right, fy, 0, right, fy - corner, 0, r, g, b, a)
+            end
 
-                                -- Right Leg
-                                {0, 65245},      -- Pelvis to Right Hip
-                                {65245, 40269},  -- Right Hip to Right Knee
-                                {40269, 37388},  -- Right Knee to Right Ankle
-                                {37388, 51826},  -- Right Ankle to Right Foot
+            ----------------------------------------------------------------------
+            -- SKELETON (3D LINES, RENDU SUSANO)
+            ----------------------------------------------------------------------
+            if esp_skeleton then
+                local bones = {
+                    {31086, 11816}, {11816, 1}, {1, 0},          -- Head → Neck → Spine → Pelvis
+                    {11816, 24818}, {24818, 25457}, {25457, 61163}, -- Right arm
+                    {11816, 13612}, {13612, 33391}, {33391, 57005}, -- Left arm
+                    {0, 65245}, {65245, 40269}, {40269, 37388},     -- Right leg
+                    {0, 63931}, {63931, 6442}, {6442, 2961}         -- Left leg
+                }
 
-                                -- Spine
-                                {11816, 23553},  -- Neck to Spine 1
-                                {23553, 24817},  -- Spine 1 to Spine 3
-                            }
-
-                            for _, pair in ipairs(bones) do
-                                local bone1 = GetPedBoneCoords(ped, pair[1])
-                                local bone2 = GetPedBoneCoords(ped, pair[2])
-
-                                if bone1 and bone2 then
-                                    DrawLine(
-                                        bone1.x, bone1.y, bone1.z,
-                                        bone2.x, bone2.y, bone2.z,
-                                        0, 255, 0, 255
-                                    )
-                                end
-                            end
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- CHAMS (simple mais visible)
-                        ----------------------------------------------------------------------
-                        if esp_chams then
-                            DrawMarker(
-                                2,
-                                coords.x, coords.y, coords.z + 1.0,
-                                0.0, 0.0, 0.0,
-                                0.0, 0.0, 0.0,
-                                0.4, 0.4, 1.9,
-                                0, 150, 255, 120,
-                                false, true, 2, false, nil, nil, false
-                            )
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- TRACERS
-                        ----------------------------------------------------------------------
-                        if esp_tracers then
-                            DrawLine(
-                                myCoords.x, myCoords.y, myCoords.z,
-                                coords.x, coords.y, coords.z,
-                                255, 255, 255, 255
-                            )
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- NAMETAGS (petit et fin)
-                        ----------------------------------------------------------------------
-                        if esp_nametag then
-                            local name = GetPlayerName(player)
-
-                            SetDrawOrigin(coords.x, coords.y, coords.z + 1.1, 0)
-                            SetTextFont(0)
-                            SetTextScale(0.20, 0.20)
-                            SetTextColour(255, 255, 255, 220)
-                            SetTextCentre(true)
-                            SetTextOutline()
-
-                            BeginTextCommandDisplayText("STRING")
-                            AddTextComponentSubstringPlayerName(name)
-                            EndTextCommandDisplayText(0.0, 0.0)
-
-                            ClearDrawOrigin()
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- DISTANCE (petit et fin aux pieds)
-                        ----------------------------------------------------------------------
-                        if esp_distance then
-                            local displayDist = math.min(dist, 200.0)
-
-                            SetDrawOrigin(coords.x, coords.y, coords.z + 0.1, 0)
-                            SetTextFont(0)
-                            SetTextScale(0.18, 0.18)
-                            SetTextColour(255, 255, 255, 200)
-                            SetTextCentre(true)
-                            SetTextOutline()
-
-                            BeginTextCommandDisplayText("STRING")
-                            AddTextComponentString(string.format("%.1f m", displayDist))
-                            EndTextCommandDisplayText(0.0, 0.0)
-
-                            ClearDrawOrigin()
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- HEALTH BAR (fine et verticale)
-                        ----------------------------------------------------------------------
-                        if esp_health then
-                            local health = GetEntityHealth(ped)
-                            local maxHealth = GetEntityMaxHealth(ped)
-                            local healthPercent = (health - 100) / (maxHealth - 100)
-                            healthPercent = math.max(0, math.min(1, healthPercent))
-
-                            local barWidth = 0.006
-                            local barHeight = 0.25
-                            local offsetX = -0.05
-                            local offsetZ = 0.5
-
-                            local r, g = 0, 255
-                            if healthPercent < 0.5 then
-                                r = 255
-                                g = 255 * (healthPercent * 2)
-                            else
-                                r = 255 * (2 - healthPercent * 2)
-                                g = 255
-                            end
-
-                            SetDrawOrigin(coords.x, coords.y, coords.z + offsetZ, 0)
-
-                            DrawRect(offsetX, 0.0, barWidth, barHeight, 0, 0, 0, 200)
-                            DrawRect(offsetX, (1 - healthPercent) * barHeight / 2, barWidth, barHeight * healthPercent, r, g, 0, 255)
-
-                            ClearDrawOrigin()
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- ARMOR BAR (fine et verticale)
-                        ----------------------------------------------------------------------
-                        if esp_armor then
-                            local armor = GetPedArmour(ped)
-                            local armorPercent = math.max(0, math.min(1, armor / 100.0))
-
-                            local barWidth = 0.008
-                            local barHeight = 0.25
-                            local offsetX = 0.15
-                            local offsetZ = 1.0
-
-                            SetDrawOrigin(coords.x, coords.y, coords.z + offsetZ, 0)
-
-                            DrawRect(offsetX, 0.0, barWidth, barHeight, 0, 0, 0, 200)
-                            DrawRect(offsetX, (1 - armorPercent) * barHeight / 2, barWidth, barHeight * armorPercent, 0, 150, 255, 255)
-
-                            ClearDrawOrigin()
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- WEAPON ESP (placeholder)
-                        ----------------------------------------------------------------------
-                        if esp_weapon then
-                            -- Non implémenté
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- FRIENDS ESP (placeholder)
-                        ----------------------------------------------------------------------
-                        if esp_friends then
-                            -- Non implémenté
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- PEDS ESP (placeholder)
-                        ----------------------------------------------------------------------
-                        if esp_peds then
-                            -- Non implémenté
-                        end
-
-                        ----------------------------------------------------------------------
-                        -- INVISIBLE ESP (placeholder)
-                        ----------------------------------------------------------------------
-                        if esp_invisible then
-                            -- Non implémenté
-                        end
-
-                    end
+                for _, b in ipairs(bones) do
+                    local p1 = GetPedBoneCoords(ped, b[1])
+                    local p2 = GetPedBoneCoords(ped, b[2])
+                    Susano.DrawLine(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, 0, 255, 0, 255)
                 end
             end
+
+            ----------------------------------------------------------------------
+            -- TRACERS (DEPUIS TES PIEDS)
+            ----------------------------------------------------------------------
+            if esp_tracers then
+                Susano.DrawLine(
+                    myCoords.x, myCoords.y, myCoords.z - 0.9,
+                    coords.x, coords.y, coords.z - 0.9,
+                    255, 255, 255, 255
+                )
+            end
+
+            ----------------------------------------------------------------------
+            -- NAMETAG (AU-DESSUS DE LA TÊTE)
+            ----------------------------------------------------------------------
+            if esp_nametag then
+                local name = GetPlayerName(player)
+                Susano.DrawText(hx, hy - 0.02, name, 18, 255, 255, 255, 255, true)
+            end
+
+            ----------------------------------------------------------------------
+            -- DISTANCE (SOUS LES PIEDS)
+            ----------------------------------------------------------------------
+            if esp_distance then
+                local d = string.format("%.1f m", dist)
+                Susano.DrawText(hx, fy + 0.02, d, 16, 200, 200, 200, 255, true)
+            end
+
+            ----------------------------------------------------------------------
+            -- HEALTH BAR (GAUCHE DE LA BOX)
+            ----------------------------------------------------------------------
+            if esp_health then
+                local hp = GetEntityHealth(ped)
+                local maxHp = GetEntityMaxHealth(ped)
+                local pct = math.max(0, math.min(1, (hp - 100) / (maxHp - 100)))
+
+                local barH = height
+                local barW = 0.0035
+
+                -- Fond
+                Susano.DrawRectFilled(left - 0.008, hy + barH / 2, barW, barH, 0, 0, 0, 180)
+                -- Remplissage
+                local fillH = barH * pct
+                local centerY = fy - fillH / 2
+                local r, g = 0, 255
+                if pct < 0.5 then
+                    r = 255
+                    g = 255 * (pct * 2)
+                else
+                    r = 255 * (2 - pct * 2)
+                    g = 255
+                end
+                Susano.DrawRectFilled(left - 0.008, centerY, barW, fillH, r, g, 0, 255)
+            end
+
+            ----------------------------------------------------------------------
+            -- ARMOR BAR (DROITE DE LA BOX)
+            ----------------------------------------------------------------------
+            if esp_armor then
+                local armor = GetPedArmour(ped)
+                local pct = math.max(0, math.min(1, armor / 100.0))
+
+                local barH = height
+                local barW = 0.0035
+
+                -- Fond
+                Susano.DrawRectFilled(right + 0.008, hy + barH / 2, barW, barH, 0, 0, 0, 180)
+                -- Remplissage
+                local fillH = barH * pct
+                local centerY = fy - fillH / 2
+                Susano.DrawRectFilled(right + 0.008, centerY, barW, fillH, 0, 150, 255, 255)
+            end
+
+            ::skip::
         end
+
+        ::continue::
     end
-end) 
+end)
