@@ -1,3 +1,4 @@
+
 local Menu = {
     isOpen = false,
     selectedIndex = 1,
@@ -61,15 +62,9 @@ local categories = {
     serveur = {
         title = "Serveur",
         items = {
-            {label = "Liste des joueurs", action = "category", target = "serveur_playerlist"},
             {label = "Option Serveur 1", action = "none"},
             {label = "Option Serveur 2", action = "none"}
         }
-    },
-
-    serveur_playerlist = {
-        title = "Serveur - Joueurs",
-        items = {} -- rempli automatiquement
     },
 
     combat = {
@@ -88,6 +83,7 @@ local categories = {
         }
     },
 
+    -- Visual modifié pour inclure Player ESP
     visual = {
         title = "Visual",
         items = {
@@ -96,6 +92,7 @@ local categories = {
         }
     },
 
+    -- Sous-catégorie Player ESP
     visual_playeresp = {
         title = "Visual - Player ESP",
         items = {
@@ -124,35 +121,6 @@ local categories = {
         }
     }
 }
-
--- 🔥 AJOUT : Fonction PlayerList
-local function RefreshServerPlayerList()
-    local list = {}
-    local myPed = PlayerPedId()
-    local myCoords = GetEntityCoords(myPed)
-
-    for _, player in ipairs(GetActivePlayers()) do
-        local ped = GetPlayerPed(player)
-        if ped ~= 0 and DoesEntityExist(ped) then
-            local coords = GetEntityCoords(ped)
-            local dist = #(coords - myCoords)
-
-            if dist <= 200.0 then
-                local name = GetPlayerName(player)
-                local serverId = GetPlayerServerId(player)
-
-                table.insert(list, {
-                    label = string.format("%s [%d] - %.1fm", name, serverId, dist),
-                    action = "select_player",
-                    target = serverId,
-                    button = true
-                })
-            end
-        end
-    end
-
-    categories.serveur_playerlist.items = list
-end
 
 -- Variables ESP
 local esp_box = false
@@ -188,6 +156,8 @@ local Banner = {
     height = 100
 }
 
+
+
 local bannerTexture = nil
 local bannerWidth = 0
 local bannerHeight = 0
@@ -199,20 +169,22 @@ local Style = {
     height = 48,
     itemSpacing = 4,
 
-    bgColor = {0.05, 0.05, 0.05, 0.90},
-    headerColor = {0.08, 0.08, 0.08, 1.0},
-    selectedColor = {0.90, 0.75, 0.20, 0.95},
-    itemColor = {0.12, 0.12, 0.12, 0.85},
-    itemHoverColor = {0.18, 0.18, 0.18, 0.90},
-    accentColor = {0.95, 0.80, 0.25, 1.0},
-    textColor = {1.0, 1.0, 1.0, 1.0},
-    textSecondary = {0.85, 0.85, 0.85, 0.9},
+    -- COULEURS VIP
+    bgColor = {0.05, 0.05, 0.05, 0.90},        -- Fond sombre
+    headerColor = {0.08, 0.08, 0.08, 1.0},     -- Bandeau noir
+    selectedColor = {0.90, 0.75, 0.20, 0.95},  -- OR premium
+    itemColor = {0.12, 0.12, 0.12, 0.85},      -- Fond item
+    itemHoverColor = {0.18, 0.18, 0.18, 0.90}, -- Hover
+    accentColor = {0.95, 0.80, 0.25, 1.0},     -- OR vif
+    textColor = {1.0, 1.0, 1.0, 1.0},          -- Blanc pur
+    textSecondary = {0.85, 0.85, 0.85, 0.9},   -- Gris clair
     separatorColor = {0.4, 0.4, 0.4, 0.5},
     footerColor = {0.08, 0.08, 0.08, 1.0},
 
     scrollbarBg = {0.10, 0.10, 0.10, 0.8},
-    scrollbarThumb = {0.95, 0.80, 0.25, 0.95},
+    scrollbarThumb = {0.95, 0.80, 0.25, 0.95}, -- OR
 
+    -- TAILLES
     titleSize = 22,
     subtitleSize = 16,
     itemSize = 18,
@@ -221,9 +193,11 @@ local Style = {
     bannerTitleSize = 32,
     bannerSubtitleSize = 18,
 
+    -- DIMENSIONS
     headerHeight = 55,
     footerHeight = 36,
 
+    -- ARRONDIS
     headerRounding = 6.0,
     itemRounding = 6.0,
     footerRounding = 6.0,
@@ -234,7 +208,8 @@ local Style = {
     scrollbarPadding = 10
 }
 
--- 🔥 Actions (avec PlayerList ajoutée)
+
+-- Actions (avec ESP ajoutés)
 local actions = {
     close = function()
         Menu.isOpen = false
@@ -246,32 +221,58 @@ local actions = {
         table.insert(Menu.categoryHistory, Menu.currentCategory)
         Menu.transitionDirection = 1
         Menu.transitionOffset = -50
-
-        if target == "serveur_playerlist" then
-            RefreshServerPlayerList()
-        end
-
         Menu.currentCategory = target
         Menu.selectedIndex = Menu.categoryIndexes[target] or 1
     end,
 
-    select_player = function(serverId)
-        print("^3Selected player: ^2" .. serverId)
+    godmode = function()
+        godmodeEnabled = not godmodeEnabled
+        print(godmodeEnabled and "^2✓ Godmode enabled^0" or "^1✗ Godmode disabled^0")
     end,
 
-    godmode = function() godmodeEnabled = not godmodeEnabled end,
     revive = function()
         local ped = PlayerPedId()
         local coords = GetEntityCoords(ped)
-        NetworkResurrectLocalPlayer(coords.x, coords.y, coords.z, GetEntityHeading(ped), true, false)
+        local heading = GetEntityHeading(ped)
+        NetworkResurrectLocalPlayer(coords.x, coords.y, coords.z, heading, true, false)
+        SetEntityHealth(ped, GetEntityMaxHealth(ped))
+        ClearPedBloodDamage(ped)
+        ClearPedTasksImmediately(ped)
+        print("^2✓ Revived^0")
     end,
-    heal = function() SetEntityHealth(PlayerPedId(), GetEntityMaxHealth(PlayerPedId())) end,
-    noclip = function() noclipEnabled = not noclipEnabled end,
-    sliderun = function() sliderunEnabled = not sliderunEnabled end,
-    superjump = function() superjumpEnabled = not superjumpEnabled end,
-    throwvehicle = function() throwvehicleEnabled = not throwvehicleEnabled end,
-    superstrength = function() superstrengthEnabled = not superstrengthEnabled end,
 
+    heal = function()
+        local ped = PlayerPedId()
+        SetEntityHealth(ped, GetEntityMaxHealth(ped))
+        print("^2✓ Healed^0")
+    end,
+
+    noclip = function()
+        noclipEnabled = not noclipEnabled
+        print(noclipEnabled and "^2✓ Noclip enabled^0" or "^1✗ Noclip disabled^0")
+    end,
+
+    sliderun = function()
+        sliderunEnabled = not sliderunEnabled
+        print(sliderunEnabled and "^2✓ Slide Run enabled^0" or "^1✗ Slide Run disabled^0")
+    end,
+
+    superjump = function()
+        superjumpEnabled = not superjumpEnabled
+        print(superjumpEnabled and "^2✓ Super Jump enabled^0" or "^1✗ Super Jump disabled^0")
+    end,
+
+    throwvehicle = function()
+        throwvehicleEnabled = not throwvehicleEnabled
+        print(throwvehicleEnabled and "^2✓ Throw From Vehicle enabled^0" or "^1✗ Throw From Vehicle disabled^0")
+    end,
+
+    superstrength = function()
+        superstrengthEnabled = not superstrengthEnabled
+        print(superstrengthEnabled and "^2✓ Super Strength enabled^0" or "^1✗ Super Strength disabled^0")
+    end,
+
+    -- ESP actions
     esp_box = function() esp_box = not esp_box end,
     esp_outlines = function() esp_outlines = not esp_outlines end,
     esp_skeleton = function() esp_skeleton = not esp_skeleton end,
@@ -287,6 +288,7 @@ local actions = {
     esp_peds = function() esp_peds = not esp_peds end,
     esp_invisible = function() esp_invisible = not esp_invisible end
 }
+
 
 function DrawMenu()
     if not Menu.isOpen then return end
@@ -305,107 +307,104 @@ function DrawMenu()
     
     local currentY = y
     
-    -- BANNER
-    if Banner.enabled then
+  if Banner.enabled then
         if bannerTexture and bannerTexture > 0 then
             Susano.DrawImage(bannerTexture, x, currentY, width, Banner.height, 1, 1, 1, 1, Style.bannerRounding)
         else
-            Susano.DrawRectFilled(x, currentY, width, Banner.height, 0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
-            Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
-
+            Susano.DrawRectFilled(x, currentY, width, Banner.height, 
+                0.08, 0.08, 0.15, 0.95, Style.bannerRounding)
+            
+            Susano.DrawRectFilled(x, currentY, width, Banner.height / 2, 
+                0.15, 0.2, 0.35, 0.4, Style.bannerRounding)
+            
             local titleWidth = Susano.GetTextWidth(Banner.text, Style.bannerTitleSize)
-            Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, Banner.text, Style.bannerTitleSize, Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0)
-
+            Susano.DrawText(x + (width - titleWidth) / 2, currentY + 30, 
+                Banner.text, Style.bannerTitleSize, 
+                Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0)
+            
             local subWidth = Susano.GetTextWidth(Banner.subtitle, Style.bannerSubtitleSize)
-            Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, Banner.subtitle, Style.bannerSubtitleSize, Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
+            Susano.DrawText(x + (width - subWidth) / 2, currentY + 65, 
+                Banner.subtitle, Style.bannerSubtitleSize, 
+                Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.9)
         end
         
         currentY = currentY + Banner.height
     end
     
-    -- HEADER
-    Susano.DrawRectFilled(x, currentY, width, Style.headerHeight, Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], Style.headerRounding)
+    Susano.DrawRectFilled(x, currentY, width, Style.headerHeight,
+        Style.headerColor[1], Style.headerColor[2], Style.headerColor[3], Style.headerColor[4], 
+        Style.headerRounding)
     
     local titleText = category.title:upper()
-    Susano.DrawText(x + 15, currentY + 14, titleText, Style.titleSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-    Susano.DrawText(x + 15.3, currentY + 14, titleText, Style.titleSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
+    Susano.DrawText(x + 15, currentY + 14, 
+        titleText, Style.titleSize, 
+        Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
+    Susano.DrawText(x + 15.3, currentY + 14, 
+        titleText, Style.titleSize, 
+        Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.8)
     
     local versionText = "v1.0"
     local versionWidth = Susano.GetTextWidth(versionText, Style.footerSize)
-    Susano.DrawText(x + width - versionWidth - 15, currentY + 17, versionText, Style.footerSize, Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
+    Susano.DrawText(x + width - versionWidth - 15, currentY + 17, 
+        versionText, Style.footerSize, 
+        Style.textSecondary[1], Style.textSecondary[2], Style.textSecondary[3], 0.8)
     
     currentY = currentY + Style.headerHeight
     
-    -- ITEMS
     local startY = currentY
     for i, item in ipairs(category.items) do
         local itemY = startY + ((i - 1) * (height + spacing))
         local isSelected = (i == Menu.selectedIndex)
         
-        -- Fond item
         if isSelected then
-            Susano.DrawRectFilled(x, itemY, width, height, Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], Style.itemRounding)
+            Susano.DrawRectFilled(x, itemY, width, height, 
+                Style.selectedColor[1], Style.selectedColor[2], Style.selectedColor[3], Style.selectedColor[4], 
+                Style.itemRounding)
         else
-            Susano.DrawRectFilled(x, itemY, width, height, Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4], Style.itemRounding)
+            Susano.DrawRectFilled(x, itemY, width, height, 
+                Style.itemColor[1], Style.itemColor[2], Style.itemColor[3], Style.itemColor[4], 
+                Style.itemRounding)
         end
         
-        -- Texte item
         local textX = x + 15
-        Susano.DrawText(textX, itemY + 12, item.label, Style.itemSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-        Susano.DrawText(textX + 0.3, itemY + 12, item.label, Style.itemSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
+        Susano.DrawText(textX, itemY + 12, 
+            item.label, Style.itemSize, 
+            Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
+        Susano.DrawText(textX + 0.3, itemY + 12, 
+            item.label, Style.itemSize, 
+            Style.textColor[1], Style.textColor[2], Style.textColor[3], 0.7)
         
-        -- Flèche catégorie
         if item.action == "category" and item.target then
             local arrowX = x + width - 20
-            Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
-
-        -- 🔥 BOUTON SELECT POUR LA PLAYERLIST
-        elseif item.button then
-            local btnWidth = 80
-            local btnHeight = height - 10
-            local btnX = x + width - btnWidth - 15
-            local btnY = itemY + 5
-
-            -- Fond du bouton
-            Susano.DrawRectFilled(btnX, btnY, btnWidth, btnHeight, 0.15, 0.15, 0.15, 0.9, 6.0)
-
-            -- Texte du bouton
-            Susano.DrawText(btnX + 20, btnY + 10, "Select", Style.itemSize - 2, 1, 1, 1, 1)
-
-        -- 🔧 Toggles / sliders
+            Susano.DrawText(arrowX, itemY + 12, ">", Style.itemSize, 
+                Style.textColor[1], Style.textColor[2], Style.textColor[3], 1.0)
         else
             local toggleStates = {
-                godmode = godmodeEnabled,
-                noclip = noclipEnabled,
-                sliderun = sliderunEnabled,
-                superjump = superjumpEnabled,
-                throwvehicle = throwvehicleEnabled,
-                superstrength = superstrengthEnabled,
+    godmode = godmodeEnabled,
+    noclip = noclipEnabled,
+    sliderun = sliderunEnabled,
+    superjump = superjumpEnabled,
+    throwvehicle = throwvehicleEnabled,
+    superstrength = superstrengthEnabled,
 
-                esp_box = esp_box,
-                esp_outlines = esp_outlines,
-                esp_skeleton = esp_skeleton,
-                esp_chams = esp_chams,
-                esp_tracers = esp_tracers,
-                esp_health = esp_health,
-                esp_armor = esp_armor,
-                esp_nametag = esp_nametag,
-                esp_distance = esp_distance,
-                esp_weapon = esp_weapon,
-                esp_ignore_self = esp_ignore_self,
-                esp_friends = esp_friends,
-                esp_peds = esp_peds,
-                esp_invisible = esp_invisible
-            }
+    -- ESP toggles
+    esp_box = esp_box,
+    esp_outlines = esp_outlines,
+    esp_skeleton = esp_skeleton,
+    esp_chams = esp_chams,
+    esp_tracers = esp_tracers,
+    esp_health = esp_health,
+    esp_armor = esp_armor,
+    esp_nametag = esp_nametag,
+    esp_distance = esp_distance,
+    esp_weapon = esp_weapon,
+    esp_ignore_self = esp_ignore_self,
+    esp_friends = esp_friends,
+    esp_peds = esp_peds,
+    esp_invisible = esp_invisible
+}
 
-            -- (Ton code toggle/slider continue ici normalement)
-        end
-    end
-
-    Susano.SubmitFrame()
-end
-
-
+        
         local sliderActions = {"noclip", "sliderun"}
         local isSlider = false
         for _, sliderAction in ipairs(sliderActions) do
@@ -777,29 +776,26 @@ Citizen.CreateThread(function()
         Citizen.Wait(0)
 
         if not (
-            esp_box or esp_outlines or esp_skeleton or esp_tracers or
-            esp_health or esp_armor or esp_nametag or esp_distance or
-            esp_weapon or esp_friends or esp_peds or esp_invisible
-        ) then
-            goto continue
-        end
+            esp_box or esp_outlines or esp_skeleton or esp_chams or esp_tracers or
+            esp_health or esp_armor or esp_nametag or esp_distance or esp_weapon or
+            esp_ignore_self or esp_friends or esp_peds or esp_invisible
+        ) then goto continue end
 
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
         local myServerId = GetPlayerServerId(PlayerId())
+        local camCoords = GetGameplayCamCoord()
 
         for _, player in ipairs(GetActivePlayers()) do
             local ped = GetPlayerPed(player)
             if ped == 0 or not DoesEntityExist(ped) then goto skip end
 
-            -- Ignore self
+            -- Filtres
             if ped == myPed and esp_ignore_self then goto skip end
 
-            -- Friends (si activé, on skip les potes)
             local serverId = GetPlayerServerId(player)
             if esp_friends and serverId == myServerId then goto skip end
 
-            -- Peds / invisibles
             if not IsPedAPlayer(ped) and not esp_peds then goto skip end
             if not IsEntityVisible(ped) and not esp_invisible then goto skip end
 
@@ -811,10 +807,10 @@ Citizen.CreateThread(function()
             -- PROJECTION 2D : TÊTE + PIED GAUCHE + PIED DROIT
             ----------------------------------------------------------------------
             local head = GetPedBoneCoords(ped, 31086)
-            local footL = GetPedBoneCoords(ped, 14201)   -- pied gauche
-            local footR = GetPedBoneCoords(ped, 52301)   -- pied droit
+            local footL = GetPedBoneCoords(ped, 14201)
+            local footR = GetPedBoneCoords(ped, 52301)
 
-            local hOk, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.15)
+            local hOk, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.18)
             local flOk, flx, fly = World3dToScreen2d(footL.x, footL.y, footL.z - 0.02)
             local frOk, frx, fry = World3dToScreen2d(footR.x, footR.y, footR.z - 0.02)
 
@@ -824,28 +820,37 @@ Citizen.CreateThread(function()
             local height = fy - hy
             if height <= 0 then goto skip end
 
-            local left = math.min(flx, frx)
-            local right = math.max(flx, frx)
-            local width = right - left
-            local centerX = (left + right) / 2
+            -- largeur basée sur les deux pieds, élargie légèrement
+            local rawLeft = math.min(flx, frx)
+            local rawRight = math.max(flx, frx)
+            local rawWidth = rawRight - rawLeft
+
+            local width = rawWidth * 1.25
+            local centerX = (flx + frx) / 2
+            local left = centerX - width / 2
+            local right = centerX + width / 2
             local centerY = (hy + fy) / 2
 
             ----------------------------------------------------------------------
-            -- BOX (RECTANGLE 2D PROPRE)
+            -- CHAMS
             ----------------------------------------------------------------------
-            if esp_box then
-                -- Fond léger
-                DrawRect(centerX, centerY, width, height, 0, 0, 0, 120)
-
-                -- Bordures fines
-                DrawRect(centerX, hy, width, 0.0015, 255, 255, 255, 255) -- top
-                DrawRect(centerX, fy, width, 0.0015, 255, 255, 255, 255) -- bottom
-                DrawRect(left, centerY, 0.0015, height, 255, 255, 255, 255) -- left
-                DrawRect(right, centerY, 0.0015, height, 255, 255, 255, 255) -- right
+            if esp_chams then
+                DrawRect(centerX, centerY, width, height, 0, 150, 255, 80)
             end
 
             ----------------------------------------------------------------------
-            -- OUTLINES (CONTOUR RENFORCÉ)
+            -- BOX
+            ----------------------------------------------------------------------
+            if esp_box then
+                DrawRect(centerX, centerY, width, height, 0, 0, 0, 120)
+                DrawRect(centerX, hy, width, 0.0015, 255, 255, 255, 255)
+                DrawRect(centerX, fy, width, 0.0015, 255, 255, 255, 255)
+                DrawRect(left, centerY, 0.0015, height, 255, 255, 255, 255)
+                DrawRect(right, centerY, 0.0015, height, 255, 255, 255, 255)
+            end
+
+            ----------------------------------------------------------------------
+            -- OUTLINES
             ----------------------------------------------------------------------
             if esp_outlines then
                 DrawRect(centerX, hy, width, 0.0025, 0, 0, 0, 255)
@@ -855,7 +860,7 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- TRACERS (3D)
+            -- TRACERS
             ----------------------------------------------------------------------
             if esp_tracers then
                 DrawLine(
@@ -866,44 +871,41 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (ALIGNÉ, LISIBLE)
+            -- SKELETON (SUPERPOSÉ, LÉGÈREMENT DÉCALÉ VERS LA CAM)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
                     -- Head / Neck / Spine
-                    {31086, 39317},   -- head → neck
-                    {39317, 24816},   -- neck → upper spine
-                    {24816, 24817},   -- upper spine → mid spine
-                    {24817, 0},       -- mid spine → pelvis
-
+                    {31086, 39317}, {39317, 24816}, {24816, 24817}, {24817, 0},
                     -- Left arm
-                    {39317, 18905},   -- neck → left clavicle
-                    {18905, 57005},   -- clavicle → left hand
-
+                    {39317, 18905}, {18905, 57005},
                     -- Right arm
-                    {39317, 28252},   -- neck → right clavicle
-                    {28252, 61163},   -- clavicle → right hand
-
+                    {39317, 28252}, {28252, 61163},
                     -- Left leg
-                    {0, 14201},       -- pelvis → left thigh
-                    {14201, 65245},   -- thigh → left calf
-                    {65245, 55120},   -- calf → left foot
-
+                    {0, 14201}, {14201, 65245}, {65245, 55120},
                     -- Right leg
-                    {0, 51826},       -- pelvis → right thigh
-                    {51826, 36864},   -- thigh → right calf
-                    {36864, 52301},   -- calf → right foot
+                    {0, 51826}, {51826, 36864}, {36864, 52301}
                 }
 
+                local function offsetTowardCam(pos)
+                    local dir = vector3(pos.x - camCoords.x, pos.y - camCoords.y, pos.z - camCoords.z)
+                    local len = #(dir)
+                    if len > 0.0 then
+                        dir = dir / len
+                        return vector3(pos.x + dir.x * 0.03, pos.y + dir.y * 0.03, pos.z + dir.z * 0.03)
+                    end
+                    return pos
+                end
+
                 for _, b in ipairs(bones) do
-                    local p1 = GetPedBoneCoords(ped, b[1])
-                    local p2 = GetPedBoneCoords(ped, b[2])
+                    local p1 = offsetTowardCam(GetPedBoneCoords(ped, b[1]))
+                    local p2 = offsetTowardCam(GetPedBoneCoords(ped, b[2]))
                     DrawLine(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, 0, 255, 0, 255)
                 end
             end
 
             ----------------------------------------------------------------------
-            -- NAMETAG (PETIT, PROPRE, CENTRÉ)
+            -- NAMETAG
             ----------------------------------------------------------------------
             if esp_nametag then
                 SetTextFont(0)
@@ -931,7 +933,7 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- WEAPON (SIMPLE HASH POUR L’INSTANT)
+            -- WEAPON
             ----------------------------------------------------------------------
             if esp_weapon then
                 local weapon = GetSelectedPedWeapon(ped)
@@ -946,7 +948,7 @@ Citizen.CreateThread(function()
             end
 
             ----------------------------------------------------------------------
-            -- HEALTH BAR (COLLÉE À GAUCHE)
+            -- HEALTH BAR
             ----------------------------------------------------------------------
             if esp_health then
                 local hp = GetEntityHealth(ped)
@@ -959,22 +961,13 @@ Citizen.CreateThread(function()
                 DrawRect(left - 0.010, centerY, barW, barH, 0, 0, 0, 180)
 
                 local fillH = barH * pct
-                local centerYFill = fy - fillH / 2
+                local fillY = fy - fillH / 2
 
-                local r, g = 0, 255
-                if pct < 0.5 then
-                    r = 255
-                    g = 255 * (pct * 2)
-                else
-                    r = 255 * (2 - pct * 2)
-                    g = 255
-                end
-
-                DrawRect(left - 0.010, centerYFill, barW, fillH, r, g, 0, 255)
+                DrawRect(left - 0.010, fillY, barW, fillH, 0, 255, 0, 255)
             end
 
             ----------------------------------------------------------------------
-            -- ARMOR BAR (COLLÉE À DROITE)
+            -- ARMOR BAR
             ----------------------------------------------------------------------
             if esp_armor then
                 local armor = GetPedArmour(ped)
@@ -986,9 +979,9 @@ Citizen.CreateThread(function()
                 DrawRect(right + 0.010, centerY, barW, barH, 0, 0, 0, 180)
 
                 local fillH = barH * pct
-                local centerYFill = fy - fillH / 2
+                local fillY = fy - fillH / 2
 
-                DrawRect(right + 0.010, centerYFill, barW, fillH, 0, 150, 255, 255)
+                DrawRect(right + 0.010, fillY, barW, fillH, 0, 150, 255, 255)
             end
 
             ::skip::
@@ -997,35 +990,3 @@ Citizen.CreateThread(function()
         ::continue::
     end
 end)
-
-Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(1000) -- refresh toutes les 1 seconde
-
-        local list = {}
-        local myPed = PlayerPedId()
-        local myCoords = GetEntityCoords(myPed)
-
-        for _, player in ipairs(GetActivePlayers()) do
-            local ped = GetPlayerPed(player)
-            if ped ~= 0 and DoesEntityExist(ped) then
-
-                local coords = GetEntityCoords(ped)
-                local dist = #(coords - myCoords)
-
-                local name = GetPlayerName(player)
-                local serverId = GetPlayerServerId(player)
-
-                table.insert(list, {
-                    label = string.format("%s [%d] - %.1fm", name, serverId, dist),
-                    action = "select_player",
-                    target = serverId,
-                    button = true
-                })
-            end
-        end
-
-        categories.serveur_playerlist.items = list
-    end
-end)
-
