@@ -809,11 +809,11 @@ Citizen.CreateThread(function()
             ----------------------------------------------------------------------
             -- PROJECTION 2D : TÊTE + PIED GAUCHE + PIED DROIT
             ----------------------------------------------------------------------
-            local head = GetPedBoneCoords(ped, 31086)
+            local head  = GetPedBoneCoords(ped, 31086)
             local footL = GetPedBoneCoords(ped, 14201)
             local footR = GetPedBoneCoords(ped, 52301)
 
-            local hOk, hx, hy = World3dToScreen2d(head.x, head.y, head.z + 0.18)
+            local hOk, hx, hy   = World3dToScreen2d(head.x,  head.y,  head.z  + 0.18)
             local flOk, flx, fly = World3dToScreen2d(footL.x, footL.y, footL.z - 0.02)
             local frOk, frx, fry = World3dToScreen2d(footR.x, footR.y, footR.z - 0.02)
 
@@ -823,43 +823,49 @@ Citizen.CreateThread(function()
             local height = fy - hy
             if height <= 0 then goto skip end
 
-            -- largeur basée sur les pieds, élargie un peu pour respirer
-            local rawLeft = math.min(flx, frx)
+            local rawLeft  = math.min(flx, frx)
             local rawRight = math.max(flx, frx)
             local rawWidth = rawRight - rawLeft
 
-            local width = rawWidth * 1.25
+            local width   = rawWidth * 1.25
             local centerX = (flx + frx) / 2
-            local left = centerX - width / 2
-            local right = centerX + width / 2
+            local left    = centerX - width / 2
+            local right   = centerX + width / 2
             local centerY = (hy + fy) / 2
 
             ----------------------------------------------------------------------
-            -- CHAMS (fond coloré)
+            -- CHAMS (fond coloré léger)
             ----------------------------------------------------------------------
             if esp_chams then
-                DrawRect(centerX, centerY, width, height, 0, 150, 255, 80)
+                DrawRect(centerX, centerY, width, height, 0, 150, 255, 60)
             end
 
             ----------------------------------------------------------------------
-            -- BOX
+            -- BOX (contour uniquement)
             ----------------------------------------------------------------------
             if esp_box then
-                DrawRect(centerX, centerY, width, height, 0, 0, 0, 120)
+                -- top
                 DrawRect(centerX, hy, width, 0.0015, 255, 255, 255, 255)
+                -- bottom
                 DrawRect(centerX, fy, width, 0.0015, 255, 255, 255, 255)
+                -- left
                 DrawRect(left, centerY, 0.0015, height, 255, 255, 255, 255)
+                -- right
                 DrawRect(right, centerY, 0.0015, height, 255, 255, 255, 255)
             end
 
             ----------------------------------------------------------------------
-            -- OUTLINES
+            -- OUTLINES (léger contour noir autour de la box)
             ----------------------------------------------------------------------
             if esp_outlines then
-                DrawRect(centerX, hy, width, 0.0025, 0, 0, 0, 255)
-                DrawRect(centerX, fy, width, 0.0025, 0, 0, 0, 255)
-                DrawRect(left, centerY, 0.0025, height, 0, 0, 0, 255)
-                DrawRect(right, centerY, 0.0025, height, 0, 0, 0, 255)
+                -- top
+                DrawRect(centerX, hy, width + 0.0015, 0.0025, 0, 0, 0, 255)
+                -- bottom
+                DrawRect(centerX, fy, width + 0.0015, 0.0025, 0, 0, 0, 255)
+                -- left
+                DrawRect(left - 0.0010, centerY, 0.0025, height + 0.0015, 0, 0, 0, 255)
+                -- right
+                DrawRect(right + 0.0010, centerY, 0.0025, height + 0.0015, 0, 0, 0, 255)
             end
 
             ----------------------------------------------------------------------
@@ -868,18 +874,18 @@ Citizen.CreateThread(function()
             if esp_tracers then
                 DrawLine(
                     myCoords.x, myCoords.y, myCoords.z - 0.9,
-                    coords.x, coords.y, coords.z - 0.9,
+                    coords.x,   coords.y,   coords.z - 0.9,
                     255, 255, 255, 255
                 )
             end
 
             ----------------------------------------------------------------------
-            -- SKELETON (3D, léger offset vers la caméra pour être visible)
+            -- SKELETON (3D, offset CORRIGÉ vers la caméra)
             ----------------------------------------------------------------------
             if esp_skeleton then
                 local bones = {
-                    -- Head / Neck / Spine
-                    {31086, 39317}, {39317, 24816}, {24816, 24817}, {24817, 0},
+                    -- Spine / Head
+                    {0, 24817}, {24817, 24816}, {24816, 39317}, {39317, 31086},
                     -- Left arm
                     {39317, 18905}, {18905, 57005},
                     -- Right arm
@@ -891,11 +897,14 @@ Citizen.CreateThread(function()
                 }
 
                 local function offsetTowardCam(pos)
+                    -- vecteur de la caméra vers l’os
                     local dir = vector3(pos.x - camCoords.x, pos.y - camCoords.y, pos.z - camCoords.z)
                     local len = #(dir)
                     if len > 0.0 then
                         dir = dir / len
-                        return vector3(pos.x + dir.x * 0.03, pos.y + dir.y * 0.03, pos.z + dir.z * 0.03)
+                        -- on rapproche l’os de la caméra (on soustrait)
+                        local offset = 0.03
+                        return vector3(pos.x - dir.x * offset, pos.y - dir.y * offset, pos.z - dir.z * offset)
                     end
                     return pos
                 end
@@ -954,9 +963,9 @@ Citizen.CreateThread(function()
             -- HEALTH BAR
             ----------------------------------------------------------------------
             if esp_health then
-                local hp = GetEntityHealth(ped)
+                local hp    = GetEntityHealth(ped)
                 local maxHp = GetEntityMaxHealth(ped)
-                local pct = math.max(0.0, math.min(1.0, (hp - 100) / (maxHp - 100)))
+                local pct   = math.max(0.0, math.min(1.0, (hp - 100) / (maxHp - 100)))
 
                 local barH = height
                 local barW = 0.0035
@@ -974,7 +983,7 @@ Citizen.CreateThread(function()
             ----------------------------------------------------------------------
             if esp_armor then
                 local armor = GetPedArmour(ped)
-                local pct = math.max(0.0, math.min(1.0, armor / 100.0))
+                local pct   = math.max(0.0, math.min(1.0, armor / 100.0))
 
                 local barH = height
                 local barW = 0.0035
@@ -993,3 +1002,4 @@ Citizen.CreateThread(function()
         ::continue::
     end
 end)
+
