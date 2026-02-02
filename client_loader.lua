@@ -75,8 +75,8 @@ local categories = {
     combat = {
         title = "Combat",
         items = {
-            {label = "Aimbot", action = "none"},
-            {label = "Triggerbot", action = "none"}
+            {label = "Aimbot", action = "aimbot"},
+             {label = "Aimbot FOV", action = "aimbot_fov"},
         }
     },
 
@@ -150,6 +150,11 @@ local throwvehicleEnabled = false
 local superstrengthEnabled = false
 local infiniteStaminaEnabled = false
 local explosiveMeleeEnabled = false
+local aimbotEnabled = false
+local aimbotFOV = 25.0
+aimbot_fov = false
+
+
 
 
 local Banner = {
@@ -285,6 +290,31 @@ local actions = {
         explosiveMeleeEnabled = not explosiveMeleeEnabled
         print(explosiveMeleeEnabled and "^2✓ Explosive Melee enabled^0" or "^1✗ Explosive Melee disabled^0")
     end,
+    
+    aimbot = function()
+        aimbotEnabled = not aimbotEnabled
+        print(aimbotEnabled and  "^2✓ aimbot enabled^0" or "^1✗ aimbot disabled^0")
+    end,
+    
+    aimbot_fov_toggle = function()
+              aimbotFOVEnabled = not aimbotFOVEnabled
+              print(aimbotFOVEnabled and "^2✓ Aimbot FOV enabled^0" or "^1✗ Aimbot FOV disabled^0")
+    end,
+
+    
+    aimbot_fov = function(direction)
+               if direction == "left" then
+                     aimbotFOV = math.max(1, aimbotFOV - 1)
+              else
+                     aimbotFOV = math.min(180, aimbotFOV + 1)
+             end
+
+            print("^2Aimbot FOV: ^0" .. aimbotFOV)
+    end,
+
+
+
+
 
 
     -- ESP actions
@@ -301,6 +331,42 @@ local actions = {
     esp_peds = function() esp_peds = not esp_peds end,
     esp_invisible = function() esp_invisible = not esp_invisible end
 }
+
+function RunAimbotLogic()
+    local myPed = PlayerPedId()
+    local myCoords = GetEntityCoords(myPed)
+
+    local bestTarget = nil
+    local bestFov = aimbotFOV
+
+    for _, player in ipairs(GetActivePlayers()) do
+        if player ~= PlayerId() then
+            local ped = GetPlayerPed(player)
+            if DoesEntityExist(ped) and not IsEntityDead(ped) then
+
+                local coords = GetEntityCoords(ped)
+                local onScreen, sx, sy = World3dToScreen2d(coords.x, coords.y, coords.z)
+
+                if onScreen then
+                    local dx = sx - 0.5
+                    local dy = sy - 0.5
+                    local fovDist = math.sqrt(dx*dx + dy*dy) * 100
+
+                    if fovDist < bestFov then
+                        bestFov = fovDist
+                        bestTarget = ped
+                    end
+                end
+            end
+        end
+    end
+
+    if bestTarget then
+        local targetCoords = GetEntityCoords(bestTarget)
+        TaskAimGunAtCoord(myPed, targetCoords.x, targetCoords.y, targetCoords.z, 50, false, false)
+    end
+end
+
 
 ----------------------------------------------------------------------
 -- PLAYER LIST (simple + thread + catégorie dynamique)
@@ -437,42 +503,96 @@ function DrawMenu()
     -- Bordure extérieure
     Susano.DrawRectFilled(x - 2, panelY - 2, width + 4, panelH + 4,
         borderGold[1], borderGold[2], borderGold[3], 0.95, 0.0)
+
     -- Fond intérieur
     Susano.DrawRectFilled(x, panelY, width, panelH,
         panelBg[1], panelBg[2], panelBg[3], panelBg[4], 0.0)
 
-    -- Items
+        -- === ITEMS ===
     for i, item in ipairs(category.items) do
         local itemY = startY + ((i - 1) * (itemH + spacing))
         local isSelected = (i == Menu.selectedIndex)
 
+        -- Fond item
         if isSelected then
-            -- Dégradé or comme ton screen
             DrawVerticalGradient(x, itemY, width, itemH, selTop, selBottom, 0.0)
         else
-            -- item “vide” noir (juste une légère couche)
-            Susano.DrawRectFilled(x, itemY, width, itemH, 0.0, 0.0, 0.0, 0.10, 0.0)
+            Susano.DrawRectFilled(x, itemY, width, itemH, 0, 0, 0, 0.10, 0.0)
         end
 
-        -- Texte item (or)
+        -- Texte item
         local textX = x + 18
         Susano.DrawText(textX, itemY + 12, item.label, Style.itemSize,
             goldText[1], goldText[2], goldText[3], isSelected and 1.0 or 0.90)
 
-        -- Flèche droite pour catégories
+        -- Flèche catégorie
         if item.action == "category" and item.target then
             Susano.DrawText(x + width - 22, itemY + 12, "›", Style.itemSize,
                 goldTextSoft[1], goldTextSoft[2], goldTextSoft[3], 0.95)
         end
 
-        -- Affichage distance à droite si présent (player_list)
+        -- Distance (player list)
         if item.distance then
             DrawTextRight(x + width - 50, itemY + 14, item.distance, Style.itemSize - 4,
-                1.0, 1.0, 1.0, isSelected and 0.95 or 0.65)
+                1, 1, 1, isSelected and 0.95 or 0.65)
         end
 
-        -- Ton toggle existant (si tu veux le garder)
-        -- On ne l’affiche que si c’est un item toggle connu
+        ---------------------------------------------------------
+        -- DÉTECTION SLIDER (Noclip, SlideRun, Aimbot FOV)
+        ---------------------------------------------------------
+        local sliderActions = {
+            noclip = { var = function() return noclipSpeed end, min = 0.5, max = 10.0 },
+            sliderun = { var = function() return sliderunSpeed end, min = 1.0, max = 20.0 },
+            aimbot_fov = { var = function() return aimbotFOV end, min = 5.0, max = 120.0 }
+        }
+
+        local isSlider = sliderActions[item.action] ~= nil
+
+        ---------------------------------------------------------
+        -- DÉTECTION BOUTON (revive / heal)
+        ---------------------------------------------------------
+        local isButton = (item.action == "revive" or item.action == "heal")
+
+        ---------------------------------------------------------
+        -- AFFICHAGE SLIDER
+        ---------------------------------------------------------
+        if isSlider then
+            local data = sliderActions[item.action]
+            local currentValue = data.var()
+            local minValue = data.min
+            local maxValue = data.max
+
+            local sliderWidth = 120
+            local sliderHeight = 6
+            local sliderX = x + width - sliderWidth - 60
+            local sliderY = itemY + (itemH - sliderHeight) / 2
+
+            local percent = (currentValue - minValue) / (maxValue - minValue)
+
+            -- Fond slider
+            Susano.DrawRectFilled(sliderX, sliderY, sliderWidth, sliderHeight,
+                0.15, 0.15, 0.15, 0.85, 3.0)
+
+            -- Barre remplie
+            Susano.DrawRectFilled(sliderX, sliderY, sliderWidth * percent, sliderHeight,
+                Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0, 3.0)
+
+            -- Thumb
+            local thumbSize = 12
+            local thumbX = sliderX + (sliderWidth * percent) - (thumbSize / 2)
+            local thumbY = itemY + (itemH - thumbSize) / 2
+            Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize,
+                1, 1, 1, 1, 6.0)
+
+            -- Valeur affichée
+            local valueText = string.format("%.0f", currentValue)
+            DrawTextRight(x + width - 18, itemY + 12, valueText, Style.itemSize - 2,
+                goldText[1], goldText[2], goldText[3], 0.95)
+        end
+
+        ---------------------------------------------------------
+        -- AFFICHAGE TOGGLE (si pas slider)
+        ---------------------------------------------------------
         local toggleStates = {
             godmode = godmodeEnabled,
             noclip = noclipEnabled,
@@ -482,6 +602,9 @@ function DrawMenu()
             superstrength = superstrengthEnabled,
             infinite_stamina = infiniteStaminaEnabled,
             explosive_melee = explosiveMeleeEnabled,
+            aimbot = aimbotEnabled,
+            aimbot_fov = aimbotFOVEnabled,
+
 
             esp_box = esp_box,
             esp_skeleton = esp_skeleton,
@@ -497,27 +620,34 @@ function DrawMenu()
             esp_invisible = esp_invisible,
         }
 
-        local isButton = (item.action == "revive" or item.action == "heal")
-        if (not isButton) and toggleStates[item.action] ~= nil then
+      ---------------------------------------------------------
+      -- AFFICHAGE TOGGLE (même si slider)
+      ---------------------------------------------------------
+      if not isButton and toggleStates[item.action] ~= nil then
             local toggleW, toggleH = 40, 18
             local toggleX = x + width - toggleW - 18
             local toggleY = itemY + (itemH - toggleH) / 2
 
             local isOn = toggleStates[item.action]
+
             if isOn then
                 Susano.DrawRectFilled(toggleX, toggleY, toggleW, toggleH,
-                    borderGold[1], borderGold[2], borderGold[3], 0.95, 9.0)
-            else
-                Susano.DrawRectFilled(toggleX, toggleY, toggleW, toggleH,
-                    0.2, 0.2, 0.2, 0.70, 9.0)
-            end
+                         borderGold[1], borderGold[2], borderGold[3], 0.95, 9.0)
+           else
+                  Susano.DrawRectFilled(toggleX, toggleY, toggleW, toggleH,
+                           0.2, 0.2, 0.2, 0.70, 9.0)
+           end
 
-            local thumb = 14
-            local thumbX = isOn and (toggleX + toggleW - thumb - 2) or (toggleX + 2)
-            local thumbY = toggleY + (toggleH - thumb)/2
-            Susano.DrawRectFilled(thumbX, thumbY, thumb, thumb, 1.0, 1.0, 1.0, 1.0, 7.0)
-        end
-    end
+           local thumb = 14
+           local thumbX = isOn and (toggleX + toggleW - thumb - 2) or (toggleX + 2)
+           local thumbY = toggleY + (toggleH - thumb) / 2
+
+          Susano.DrawRectFilled(thumbX, thumbY, thumb, thumb,
+                    1, 1, 1, 1, 7.0)
+  end
+       
+end
+
 
     -- === Scrollbar à gauche (style or) ===
     if itemsCount > 0 then
@@ -525,27 +655,36 @@ function DrawMenu()
         local scrollbarY = startY
         local scrollbarH = itemsCount * (itemH + spacing) - spacing
 
-        -- fond barre
-        Susano.DrawRectFilled(scrollbarX, scrollbarY, 8, scrollbarH, 0.0, 0.0, 0.0, 0.55, 4.0)
+        -- Fond de la barre
+        Susano.DrawRectFilled(scrollbarX, scrollbarY, 8, scrollbarH,
+            0, 0, 0, 0.55, 4.0)
 
         local thumbH = math.max(24, scrollbarH / itemsCount)
-        local thumbY = scrollbarY + ((Menu.selectedIndex - 1) / math.max(1, itemsCount - 1)) * (scrollbarH - thumbH)
+        local thumbY = scrollbarY + ((Menu.selectedIndex - 1) /
+            math.max(1, itemsCount - 1)) * (scrollbarH - thumbH)
 
+        -- Curseur
         Susano.DrawRectFilled(scrollbarX + 1, thumbY, 6, thumbH,
             borderGold[1], borderGold[2], borderGold[3], 0.95, 4.0)
     end
 
     -- === Footer ===
     local footerY = panelY + panelH + 10
-    Susano.DrawRectFilled(x - 2, footerY, width + 4, 40, footerBg[1], footerBg[2], footerBg[3], footerBg[4], 0.0)
+    Susano.DrawRectFilled(x - 2, footerY, width + 4, 40,
+        footerBg[1], footerBg[2], footerBg[3], footerBg[4], 0.0)
 
-    Susano.DrawText(x + 12, footerY + 12, "Made By Nylox", Style.footerSize, 1.0, 1.0, 1.0, 0.85)
+    -- Texte footer
+    Susano.DrawText(x + 12, footerY + 12, "Made By Nylox",
+        Style.footerSize, 1, 1, 1, 0.85)
 
+    -- Position item
     local posText = string.format("%d/%d", Menu.selectedIndex, itemsCount)
-    DrawTextRight(x + width - 12, footerY + 12, posText, Style.footerSize, 1.0, 1.0, 1.0, 0.85)
+    DrawTextRight(x + width - 12, footerY + 12, posText,
+        Style.footerSize, 1, 1, 1, 0.85)
 
     Susano.SubmitFrame()
 end
+
 
 
 local VK_F5 = 0x74
@@ -621,6 +760,12 @@ Citizen.CreateThread(function()
                         else
                             sliderunSpeed = math.min(20.0, sliderunSpeed + 1.0)
                         end
+                        elseif item.action == "aimbot_fov" then
+                             if leftPressed then
+                                   aimbotFOV = math.max(1, aimbotFOV - 1)
+                            else
+                                   aimbotFOV = math.min(180, aimbotFOV + 1)
+                          end
                     end
                 end
             end
@@ -652,24 +797,28 @@ Citizen.CreateThread(function()
             
             local _, enterPressed = Susano.GetAsyncKeyState(VK_RETURN)
             if enterPressed and not lastEnterPress then
-                local item = category.items[Menu.selectedIndex]
-                if item then
-                    local action = actions[item.action]
-                    if action then
-                        if item.target then
-                            action(item.target)
-                        else
-                            action()
-                        end
-                    end
-                end
-            end
-            lastEnterPress = enterPressed
+                  local item = category.items[Menu.selectedIndex]
+
+                  -- empêcher ENTER d'agir sur les sliders
+                  if item and item.action ~= "aimbot_fov" then
+                      local action = actions[item.action]
+                      if action then
+                          if item.target then
+                              action(item.target)
+                         else
+                              action()
+                      end
+              end
+       end
+end
+lastEnterPress = enterPressed
+
             
             DrawMenu()
         end
-        
-        if noclipEnabled then
+
+
+if noclipEnabled then
             local ped = PlayerPedId()
             local entity = ped
             local inVehicle = IsPedInAnyVehicle(ped, false)
@@ -791,24 +940,7 @@ Citizen.CreateThread(function()
     end
 end)
 
-Citizen.CreateThread(function()
-    if Banner.enabled and Banner.imagePath then
-        local texId, w, h = Susano.LoadTexture(Banner.imagePath)
-        if texId and texId > 0 then
-            bannerTexture = texId
-            bannerWidth = w
-            bannerHeight = h
-            print("^2✓ Banner loaded: " .. Banner.imagePath .. "^0")
-        else
-            print("^1✗ Unable to load banner^0")
-        end
-    end
-end)
-
-Citizen.CreateThread(function()
-    Wait(1000)
-end)
-
+       
 local function W2S(x, y, z)
     local ok, sx, sy = World3dToScreen2d(x, y, z)
     if not ok then return false, 0, 0 end
@@ -881,13 +1013,6 @@ Citizen.CreateThread(function()
             local left    = centerX - width / 2
             local right   = centerX + width / 2
             local centerY = (hy + fy) / 2
-
-            ----------------------------------------------------------------------
-            -- CHAMS
-            ----------------------------------------------------------------------
-            if esp_chams then
-                Susano.DrawRectFilled(left, hy, width, height, 0, 0.6, 1, 0.25, 0)
-            end
 
             ----------------------------------------------------------------------
             -- BOX (bounding box 3D → 2D, couvre tout le joueur)
@@ -1025,12 +1150,33 @@ Citizen.CreateThread(function()
                 Susano.DrawText(centerX, fy + 20, string.format("%.1f m", dist), 16, 0.8, 0.8, 0.8, 1)
             end
 
-            ----------------------------------------------------------------------
-            -- WEAPON
-            ----------------------------------------------------------------------
-            if esp_weapon then
-                Susano.DrawText(centerX, hy - 36, tostring(GetSelectedPedWeapon(ped)), 16, 1, 0.8, 0.4, 1)
-            end
+           ----------------------------------------------------------------------
+           -- WEAPON (nom arme en bas centré SAFE FiveM)
+           ----------------------------------------------------------------------
+           if esp_weapon then
+                 local weaponHash = GetSelectedPedWeapon(ped)
+
+                -- fallback simple propre
+                 local name = tostring(weaponHash)
+
+                -- si dispo (certaines builds)
+                 if GetWeaponDisplayNameFromHash then
+                        local label = GetWeaponDisplayNameFromHash(weaponHash)
+                        name = GetLabelText(label)
+               end
+
+               local size = 16
+               local textW = Susano.GetTextWidth(name, size)
+
+              Susano.DrawText(
+                       centerX - textW / 2,
+                       fy + 36,
+                       name,
+                       size,
+                       1, 0.85, 0.45, 1
+              )
+     end
+
 
             ----------------------------------------------------------------------
             -- HEALTH BAR
@@ -1062,23 +1208,30 @@ Citizen.CreateThread(function()
                   Susano.DrawRectFilled(barX, fillY, barW, fillH, 0, 1, 0, 1, 0)
          end
 
-            ----------------------------------------------------------------------
-            -- ARMOR BAR
-            ----------------------------------------------------------------------
-            if esp_armor then
-                local armor = GetPedArmour(ped)
-                local pct   = math.max(0.0, math.min(1.0, armor / 100.0))
+         ----------------------------------------------------------------------
+         -- ARMOR BAR (même style que health, mais à droite)
+         ----------------------------------------------------------------------
+         if esp_armor then
+               local armor = GetPedArmour(ped)
 
-                local barH = height
-                local barW = 4
+               local pct = armor / 100.0
+               if pct < 0.0 then pct = 0.0 end
+               if pct > 1.0 then pct = 1.0 end
 
-                Susano.DrawRectFilled(right + 10, centerY, barW, barH, 0, 0, 0, 0.7, 0)
+               local barW = 4
+               local pad  = 2 -- espace entre box et barre
+               local barX = right + pad
 
-                local fillH = barH * pct
-                local fillY = fy - fillH / 2
+               -- fond (pile même hauteur que la box)
+              Susano.DrawRectFilled(barX, hy, barW, height, 0, 0, 0, 0.7, 0)
 
-                Susano.DrawRectFilled(right + 10, fillY, barW, fillH, 0, 0.6, 1, 1, 0)
-            end
+              -- remplissage depuis le bas (COMME HEALTH)
+              local fillH = height * pct
+              local fillY = fy - fillH
+
+             Susano.DrawRectFilled(barX, fillY, barW, fillH, 0, 0.6, 1, 1, 0)
+    end
+
 
             ::skip::
         end
@@ -1088,5 +1241,49 @@ Citizen.CreateThread(function()
         ::continue::
     end
 end)
+
+----------------------------------------------------------------------
+-- THREAD : AFFICHAGE DU CERCLE FOV (VISUEL UNIQUEMENT)
+----------------------------------------------------------------------
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        -- Affichage uniquement si le toggle est activé
+        if not aimbotFOVEnabled then
+            goto continue
+        end
+
+        -- Taille du cercle basée sur ton slider
+        local radius = aimbotFOV * 0.0025
+
+        -- Position écran (centre)
+        local cx = 0.5
+        local cy = 0.5
+
+        -- Couleur or premium
+        local r, g, b, a = 0.95, 0.80, 0.25, 0.95
+
+        -- Cercle simulé avec des lignes (compatible toutes versions Susano)
+        local segments = 90
+        for i = 0, segments - 1 do
+            local t1 = (i     / segments) * 2.0 * math.pi
+            local t2 = ((i+1) / segments) * 2.0 * math.pi
+
+            local x1 = cx + math.cos(t1) * radius
+            local y1 = cy + math.sin(t1) * radius
+
+            local x2 = cx + math.cos(t2) * radius
+            local y2 = cy + math.sin(t2) * radius
+
+            Susano.DrawLine(x1, y1, x2, y2, r, g, b, a)
+        end
+
+        ::continue::
+    end
+end)
+
+
 
 
