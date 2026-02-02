@@ -30,6 +30,7 @@ local categories = {
         items = {
             {label = "Health", action = "category", target = "player_health"},
             {label = "Movement", action = "category", target = "player_movement"},
+            {label = "personnaliser", action = "category", target = "player_personnalise"},
             {label = "Other", action = "category", target = "player_other"}
         }
     },
@@ -53,6 +54,13 @@ local categories = {
 
         }
     },
+    
+    player_personnalise = {
+             title = "Player personalise",
+             items = {
+                       {label = "Random outfit", action = "random_outfit"},
+             }
+    },
 
     player_other = {
         title = "Player - Other",
@@ -75,7 +83,8 @@ local categories = {
     serveur_other = {
             title = "Other",
             items = {
-                    {label = "Spectate Selected Player", action = "spectate_toggle"},            
+                    {label = "Spectate Selected Player", action = "spectate_toggle"},   
+                    {label = "TP to Selected Player", action = "tp_to_player"},
            }
      },
 
@@ -350,8 +359,53 @@ local actions = {
                             print("^1✗ Spectate disabled^0")
                     end
     end,
+    
+    tp_to_player = function()
+               if lastSelectedPlayer then
+                    local targetPed = GetPlayerPed(GetPlayerFromServerId(lastSelectedPlayer))
+                    if targetPed and targetPed ~= 0 then
+                         local coords = GetEntityCoords(targetPed)
+                         SetEntityCoords(PlayerPedId(), coords.x, coords.y, coords.z, false, false, false, false)
+                         print("^2✓ Téléporté au joueur "..lastSelectedPlayer.."^0")
+                   else
+                         print("^1✗ Joueur introuvable^0")
+                  end
+             else
+                    print("^1✗ Aucun joueur sélectionné^0")
+            end
+    end,
+    
+    random_outfit = function()
+              local ped = PlayerPedId()
 
+              -- Random components (0 à 11)
+              for i = 0, 11 do
+                    local maxDraw = GetNumberOfPedDrawableVariations(ped, i)
+                    if maxDraw > 0 then
+                            local drawable = math.random(0, maxDraw - 1)
+                            local maxTex = GetNumberOfPedTextureVariations(ped, i, drawable)
+                            local texture = math.random(0, math.max(0, maxTex - 1))
+                            SetPedComponentVariation(ped, i, drawable, texture, 0)
+                    end
+            end
 
+            -- Random props (0 à 7)
+            for i = 0, 7 do
+                  if math.random(0, 1) == 1 then
+                         ClearPedProp(ped, i)
+                 else
+                         local maxProp = GetNumberOfPedPropDrawableVariations(ped, i)
+                          if maxProp > 0 then
+                                  local prop = math.random(0, maxProp - 1)
+                                  local maxTex = GetNumberOfPedPropTextureVariations(ped, i, prop)
+                                  local tex = math.random(0, math.max(0, maxTex - 1))
+                                  SetPedPropIndex(ped, i, prop, tex, true)
+                         end
+                  end
+            end
+
+            print("^2✓ Random outfit applied^0")
+    end,
 
 
 
@@ -1417,6 +1471,30 @@ actions.spectate_toggle = function()
         print("^1✗ Spectate disabled^0")
     end
 end
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        if tpToPlayerRequested then
+            tpToPlayerRequested = false
+
+            if lastSelectedPlayer then
+                local targetPed = GetPlayerPed(GetPlayerFromServerId(lastSelectedPlayer))
+                if targetPed and targetPed ~= 0 then
+                    local coords = GetEntityCoords(targetPed)
+                    SetEntityCoords(PlayerPedId(), coords.x, coords.y, coords.z, false, false, false, false)
+                    print("^2✓ Téléporté au joueur "..lastSelectedPlayer.."^0")
+                else
+                    print("^1✗ Joueur introuvable^0")
+                end
+            else
+                print("^1✗ Aucun joueur sélectionné^0")
+            end
+        end
+    end
+end)
+
 
 
 
