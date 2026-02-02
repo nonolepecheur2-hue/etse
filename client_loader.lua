@@ -215,50 +215,53 @@ local bannerWidth = 0
 local bannerHeight = 0
 
 local Style = {
-    x = 70,
-    y = 100,
-    width = 380,
-    height = 48,
-    itemSpacing = 4,
+    -- POSITION & DIMENSIONS
+    x = 60,
+    y = 80,
+    width = 420,
+    height = 40,
+    itemSpacing = 5,
 
-    -- COULEURS VIP
-    bgColor = {0.05, 0.05, 0.05, 0.90},        -- Fond sombre
-    headerColor = {0.08, 0.08, 0.08, 1.0},     -- Bandeau noir
-    selectedColor = {0.90, 0.75, 0.20, 0.95},  -- OR premium
-    itemColor = {0.12, 0.12, 0.12, 0.85},      -- Fond item
-    itemHoverColor = {0.18, 0.18, 0.18, 0.90}, -- Hover
-    accentColor = {0.95, 0.80, 0.25, 1.0},     -- OR vif
+    -- COULEURS (inspiré du menu Plaid)
+    bgColor = {0.02, 0.02, 0.02, 0.92},        -- Fond très sombre
+    headerColor = {0.05, 0.05, 0.05, 1.0},     -- Bandeau noir profond
+    selectedColor = {0.20, 0.55, 1.00, 0.95},  -- Bleu électrique moderne
+    itemColor = {0.10, 0.10, 0.10, 0.85},      -- Fond item sombre
+    itemHoverColor = {0.16, 0.16, 0.16, 0.90}, -- Hover gris foncé
+    accentColor = {0.25, 0.55, 1.00, 1.0},     -- Bleu vif (lignes, sliders)
     textColor = {1.0, 1.0, 1.0, 1.0},          -- Blanc pur
-    textSecondary = {0.85, 0.85, 0.85, 0.9},   -- Gris clair
-    separatorColor = {0.4, 0.4, 0.4, 0.5},
-    footerColor = {0.08, 0.08, 0.08, 1.0},
+    textSecondary = {0.75, 0.75, 0.75, 0.9},   -- Gris clair
+    separatorColor = {0.25, 0.25, 0.25, 0.6},  -- Séparateurs gris
+    footerColor = {0.05, 0.05, 0.05, 1.0},     -- Footer sombre
 
-    scrollbarBg = {0.10, 0.10, 0.10, 0.8},
-    scrollbarThumb = {0.95, 0.80, 0.25, 0.95}, -- OR
+    scrollbarBg = {0.08, 0.08, 0.08, 0.8},     -- Scrollbar fond
+    scrollbarThumb = {0.25, 0.55, 1.00, 0.95}, -- Scrollbar bleu
 
-    -- TAILLES
-    titleSize = 22,
+    -- TAILLES DE TEXTE
+    titleSize = 24,
     subtitleSize = 16,
     itemSize = 18,
     infoSize = 14,
     footerSize = 14,
-    bannerTitleSize = 32,
+    bannerTitleSize = 34,
     bannerSubtitleSize = 18,
 
     -- DIMENSIONS
-    headerHeight = 55,
-    footerHeight = 36,
+    headerHeight = 48,   -- plus fin
+    footerHeight = 32,
 
     -- ARRONDIS
-    headerRounding = 6.0,
-    itemRounding = 6.0,
-    footerRounding = 6.0,
-    bannerRounding = 6.0,
-    globalRounding = 8.0,
+    headerRounding = 8.0,
+    itemRounding = 8.0,
+    footerRounding = 8.0,
+    bannerRounding = 8.0,
+    globalRounding = 10.0,
 
+    -- SCROLLBAR
     scrollbarWidth = 8,
-    scrollbarPadding = 10
+    scrollbarPadding = 12
 }
+
 
 
 -- Actions (avec ESP ajoutés)
