@@ -201,7 +201,7 @@ local freecamFeatures = {
 
 local Banner = {
     enabled = true,
-    imagePath = nil,
+    imagePath = "vip.png",
     text = "VIP",
     subtitle = "MENU",
     height = 100
