@@ -59,8 +59,8 @@ local categories = {
         items = {
             {label = "Throw From Vehicle", action = "throwvehicle"},
             {label = "Super Strength", action = "superstrength"},
-            {label = "Explosive Melee", action = "explosive_melee"}
-            
+            {label = "Explosive Melee", action = "explosive_melee"},
+            {label = "Carry Vehicle", action = "carry_vehicle"},           
         }
     },
 
@@ -68,9 +68,19 @@ local categories = {
         title = "Serveur",
         items = {
             {label = "player-list", action = "player-list"},
-            {label = "Option Serveur 2", action = "none"}
+            {label = "Other", action = "category", target = "serveur_other"}
         }
     },
+    
+    serveur_other = {
+            title = "Other",
+            items = {
+                    {label = "Spectate Selected Player", action = "spectate_toggle"},            
+           }
+     },
+
+             
+
 
     combat = {
         title = "Combat",
@@ -153,9 +163,9 @@ local explosiveMeleeEnabled = false
 local aimbotEnabled = false
 local aimbotFOV = 25.0
 aimbot_fov = false
-
-
-
+local carryVehicleEnabled = false
+local carriedVehicle = nil
+spectateEnabled = false
 
 local Banner = {
     enabled = true,
@@ -164,6 +174,7 @@ local Banner = {
     subtitle = "MENU",
     height = 100
 }
+
 
 
 
@@ -311,7 +322,34 @@ local actions = {
 
             print("^2Aimbot FOV: ^0" .. aimbotFOV)
     end,
+    
+    carry_vehicle = function()
+            carryVehicleEnabled = not carryVehicleEnabled
 
+            if not carryVehicleEnabled and carriedVehicle then
+                  DetachEntity(carriedVehicle, true, true)
+                  carriedVehicle = nil
+           end
+
+           print(carryVehicleEnabled and "^2✓ Carry Vehicle enabled^0" or "^1✗ Carry Vehicle disabled^0")
+    end,
+    
+    spectate_toggle = function()
+                     spectateEnabled = not spectateEnabled
+
+                     if spectateEnabled then
+                           if lastSelectedPlayer then
+                                Susano.Spectate(GetPlayerPed(lastSelectedPlayer))
+                                print("^2✓ Spectate enabled on player "..lastSelectedPlayer.."^0")
+                          else
+                                print("^1✗ Aucun joueur sélectionné^0")
+                                spectateEnabled = false
+                         end
+                     else
+                            Susano.StopSpectate()
+                            print("^1✗ Spectate disabled^0")
+                    end
+    end,
 
 
 
@@ -367,7 +405,6 @@ function RunAimbotLogic()
     end
 end
 
-
 ----------------------------------------------------------------------
 -- PLAYER LIST (simple + thread + catégorie dynamique)
 ----------------------------------------------------------------------
@@ -415,6 +452,7 @@ Citizen.CreateThread(function()
         categories.player_list.items = playerListItems
     end
 end)
+ 
 
 
 -- Petit helper : rectangle “dégradé” (simulé en plusieurs bandes)
@@ -437,6 +475,12 @@ local function DrawTextRight(xRight, y, text, size, r,g,b,a)
     Susano.DrawText(xRight - tw, y, text, size, r,g,b,a)
 end
 
+local selectedPlayers = {}   -- stockage des joueurs sélectionnés
+local maxListHeight = 380    -- hauteur max du panneau scrollable
+
+local selectedPlayers = {}   -- stockage des joueurs sélectionnés
+local maxListHeight = 380    -- hauteur max du panneau scrollable
+
 function DrawMenu()
     if not Menu.isOpen then return end
     Susano.BeginFrame()
@@ -448,239 +492,180 @@ function DrawMenu()
     end
 
     local x, y = Style.x, Style.y
-    local width = Style.width
-    local itemH = Style.height
-    local spacing = Style.itemSpacing
+    local w = Style.width
+    local itemH = 34
+    local gap = 4
 
-    -- === COULEURS STYLE “VIP” ===
-    local goldText      = {0.88, 0.74, 0.30, 0.95}
-    local goldTextSoft  = {0.80, 0.66, 0.25, 0.90}
-    local panelBg       = {0.02, 0.02, 0.02, 0.92}
-    local headerBg      = {0.00, 0.00, 0.00, 0.92}
-    local footerBg      = {0.00, 0.00, 0.00, 0.90}
-    local borderGold    = {0.90, 0.75, 0.20, 0.95}
+    -------------------------------------------------
+    -- STYLE
+    -------------------------------------------------
+    local cBanner = {0.10,0.10,0.10,0.90}
+    local cHeader = {0.05,0.05,0.05,0.85}
+    local cPanel  = {0.00,0.00,0.00,0.35}
+    local cItem   = {0.05,0.05,0.05,0.35}
+    local cSel    = {0.75,0.75,0.75,0.35}
+    local cText   = {1,1,1,0.9}
 
-    -- Dégradé sélection
-    local selTop        = {0.92, 0.80, 0.35, 0.95}
-    local selBottom     = {0.55, 0.42, 0.12, 0.95}
+    local curY = y
 
-    local currentY = y
-
-    -- === BANNIÈRE ===
+    -------------------------------------------------
+    -- BANNER
+    -------------------------------------------------
     if Banner.enabled then
-        if bannerTexture and bannerTexture > 0 then
-            Susano.DrawImage(bannerTexture, x, currentY, width, Banner.height, 1, 1, 1, 1, Style.bannerRounding)
+        if bannerTexture then
+            Susano.DrawImage(bannerTexture, x, curY, w, Banner.height, 1,1,1,1,0)
         else
-            Susano.DrawRectFilled(x, currentY, width, Banner.height, 0.05, 0.03, 0.01, 0.95, Style.bannerRounding)
-            local titleWidth = Susano.GetTextWidth(Banner.text, Style.bannerTitleSize)
-            Susano.DrawText(x + (width - titleWidth)/2, currentY + 28, Banner.text, Style.bannerTitleSize,
-                borderGold[1], borderGold[2], borderGold[3], 1.0)
+            Susano.DrawRectFilled(x, curY, w, Banner.height, cBanner[1],cBanner[2],cBanner[3],cBanner[4],0)
         end
-        currentY = currentY + Banner.height
+        curY = curY + Banner.height
     end
 
-    -- === “Main Menu” (barre noire sous bannière) ===
-    local headerH = 44
-    Susano.DrawRectFilled(x, currentY, width, headerH, headerBg[1], headerBg[2], headerBg[3], headerBg[4], 0.0)
+    -------------------------------------------------
+    -- HEADER
+    -------------------------------------------------
+    Susano.DrawRectFilled(x, curY, w, 26, cHeader[1],cHeader[2],cHeader[3],cHeader[4],0)
+    Susano.DrawText(x+10, curY+5, "Main Menu", 14, 1,1,1,0.7)
+    curY = curY + 30
 
-    local sub = "Main Menu"
-    local subW = Susano.GetTextWidth(sub, Style.subtitleSize)
-    Susano.DrawText(x + (width - subW)/2, currentY + 12, sub, Style.subtitleSize,
-        1.0, 1.0, 1.0, 0.90)
-
-    currentY = currentY + headerH
-
-    -- === ZONE ITEMS ===
-    local startY = currentY
+    -------------------------------------------------
+    -- SCROLLING POUR PLAYER LIST
+    -------------------------------------------------
     local itemsCount = #category.items
-    local itemsAreaH = itemsCount * (itemH + spacing) - spacing
-    if itemsAreaH < 0 then itemsAreaH = 0 end
+    local totalHeight = itemsCount * (itemH + gap)
+    local scrollable = (Menu.currentCategory == "player_list" and totalHeight > maxListHeight)
 
-    -- Fond panneau + bordure or
-    local panelH = itemsAreaH + 16
-    local panelY = startY - 8
+    local panelHeight = scrollable and maxListHeight or totalHeight
+    Susano.DrawRectFilled(x, curY-6, w, panelHeight+40, cPanel[1],cPanel[2],cPanel[3],cPanel[4],0)
 
-    -- Bordure extérieure
-    Susano.DrawRectFilled(x - 2, panelY - 2, width + 4, panelH + 4,
-        borderGold[1], borderGold[2], borderGold[3], 0.95, 0.0)
+    -- Calcul du scroll
+    if scrollable then
+        if Menu.selectedIndex < 1 then Menu.selectedIndex = 1 end
+        if Menu.selectedIndex > itemsCount then Menu.selectedIndex = itemsCount end
 
-    -- Fond intérieur
-    Susano.DrawRectFilled(x, panelY, width, panelH,
-        panelBg[1], panelBg[2], panelBg[3], panelBg[4], 0.0)
+        local visibleItems = math.floor(maxListHeight / (itemH + gap))
+        local startIndex = math.max(1, Menu.selectedIndex - math.floor(visibleItems/2))
+        local endIndex = math.min(itemsCount, startIndex + visibleItems - 1)
 
-        -- === ITEMS ===
-    for i, item in ipairs(category.items) do
-        local itemY = startY + ((i - 1) * (itemH + spacing))
-        local isSelected = (i == Menu.selectedIndex)
+        -- Scrollbar GRIS
+        local sbHeight = maxListHeight * (visibleItems / itemsCount)
+        local sbY = curY + ((Menu.selectedIndex - 1) / itemsCount) * maxListHeight
+        Susano.DrawRectFilled(x + w - 10, sbY, 6, sbHeight, 0.6,0.6,0.6,0.9, 4)
 
-        -- Fond item
-        if isSelected then
-            DrawVerticalGradient(x, itemY, width, itemH, selTop, selBottom, 0.0)
-        else
-            Susano.DrawRectFilled(x, itemY, width, itemH, 0, 0, 0, 0.10, 0.0)
-        end
-
-        -- Texte item
-        local textX = x + 18
-        Susano.DrawText(textX, itemY + 12, item.label, Style.itemSize,
-            goldText[1], goldText[2], goldText[3], isSelected and 1.0 or 0.90)
-
-        -- Flèche catégorie
-        if item.action == "category" and item.target then
-            Susano.DrawText(x + width - 22, itemY + 12, "›", Style.itemSize,
-                goldTextSoft[1], goldTextSoft[2], goldTextSoft[3], 0.95)
-        end
-
-        -- Distance (player list)
-        if item.distance then
-            DrawTextRight(x + width - 50, itemY + 14, item.distance, Style.itemSize - 4,
-                1, 1, 1, isSelected and 0.95 or 0.65)
-        end
-
-        ---------------------------------------------------------
-        -- DÉTECTION SLIDER (Noclip, SlideRun, Aimbot FOV)
-        ---------------------------------------------------------
-        local sliderActions = {
-            noclip = { var = function() return noclipSpeed end, min = 0.5, max = 10.0 },
-            sliderun = { var = function() return sliderunSpeed end, min = 1.0, max = 20.0 },
-            aimbot_fov = { var = function() return aimbotFOV end, min = 5.0, max = 120.0 }
-        }
-
-        local isSlider = sliderActions[item.action] ~= nil
-
-        ---------------------------------------------------------
-        -- DÉTECTION BOUTON (revive / heal)
-        ---------------------------------------------------------
-        local isButton = (item.action == "revive" or item.action == "heal")
-
-        ---------------------------------------------------------
-        -- AFFICHAGE SLIDER
-        ---------------------------------------------------------
-        if isSlider then
-            local data = sliderActions[item.action]
-            local currentValue = data.var()
-            local minValue = data.min
-            local maxValue = data.max
-
-            local sliderWidth = 120
-            local sliderHeight = 6
-            local sliderX = x + width - sliderWidth - 60
-            local sliderY = itemY + (itemH - sliderHeight) / 2
-
-            local percent = (currentValue - minValue) / (maxValue - minValue)
-
-            -- Fond slider
-            Susano.DrawRectFilled(sliderX, sliderY, sliderWidth, sliderHeight,
-                0.15, 0.15, 0.15, 0.85, 3.0)
-
-            -- Barre remplie
-            Susano.DrawRectFilled(sliderX, sliderY, sliderWidth * percent, sliderHeight,
-                Style.accentColor[1], Style.accentColor[2], Style.accentColor[3], 1.0, 3.0)
-
-            -- Thumb
-            local thumbSize = 12
-            local thumbX = sliderX + (sliderWidth * percent) - (thumbSize / 2)
-            local thumbY = itemY + (itemH - thumbSize) / 2
-            Susano.DrawRectFilled(thumbX, thumbY, thumbSize, thumbSize,
-                1, 1, 1, 1, 6.0)
-
-            -- Valeur affichée
-            local valueText = string.format("%.0f", currentValue)
-            DrawTextRight(x + width - 18, itemY + 12, valueText, Style.itemSize - 2,
-                goldText[1], goldText[2], goldText[3], 0.95)
-        end
-
-        ---------------------------------------------------------
-        -- AFFICHAGE TOGGLE (si pas slider)
-        ---------------------------------------------------------
-        local toggleStates = {
-            godmode = godmodeEnabled,
-            noclip = noclipEnabled,
-            sliderun = sliderunEnabled,
-            superjump = superjumpEnabled,
-            throwvehicle = throwvehicleEnabled,
-            superstrength = superstrengthEnabled,
-            infinite_stamina = infiniteStaminaEnabled,
-            explosive_melee = explosiveMeleeEnabled,
-            aimbot = aimbotEnabled,
-            aimbot_fov = aimbotFOVEnabled,
-
-
-            esp_box = esp_box,
-            esp_skeleton = esp_skeleton,
-            esp_tracers = esp_tracers,
-            esp_health = esp_health,
-            esp_armor = esp_armor,
-            esp_nametag = esp_nametag,
-            esp_distance = esp_distance,
-            esp_weapon = esp_weapon,
-            esp_ignore_self = esp_ignore_self,
-            esp_friends = esp_friends,
-            esp_peds = esp_peds,
-            esp_invisible = esp_invisible,
-        }
-
-      ---------------------------------------------------------
-      -- AFFICHAGE TOGGLE (même si slider)
-      ---------------------------------------------------------
-      if not isButton and toggleStates[item.action] ~= nil then
-            local toggleW, toggleH = 40, 18
-            local toggleX = x + width - toggleW - 18
-            local toggleY = itemY + (itemH - toggleH) / 2
-
-            local isOn = toggleStates[item.action]
-
-            if isOn then
-                Susano.DrawRectFilled(toggleX, toggleY, toggleW, toggleH,
-                         borderGold[1], borderGold[2], borderGold[3], 0.95, 9.0)
-           else
-                  Susano.DrawRectFilled(toggleX, toggleY, toggleW, toggleH,
-                           0.2, 0.2, 0.2, 0.70, 9.0)
-           end
-
-           local thumb = 14
-           local thumbX = isOn and (toggleX + toggleW - thumb - 2) or (toggleX + 2)
-           local thumbY = toggleY + (toggleH - thumb) / 2
-
-          Susano.DrawRectFilled(thumbX, thumbY, thumb, thumb,
-                    1, 1, 1, 1, 7.0)
-  end
-       
-end
-
-
-    -- === Scrollbar à gauche (style or) ===
-    if itemsCount > 0 then
-        local scrollbarX = x - 14
-        local scrollbarY = startY
-        local scrollbarH = itemsCount * (itemH + spacing) - spacing
-
-        -- Fond de la barre
-        Susano.DrawRectFilled(scrollbarX, scrollbarY, 8, scrollbarH,
-            0, 0, 0, 0.55, 4.0)
-
-        local thumbH = math.max(24, scrollbarH / itemsCount)
-        local thumbY = scrollbarY + ((Menu.selectedIndex - 1) /
-            math.max(1, itemsCount - 1)) * (scrollbarH - thumbH)
-
-        -- Curseur
-        Susano.DrawRectFilled(scrollbarX + 1, thumbY, 6, thumbH,
-            borderGold[1], borderGold[2], borderGold[3], 0.95, 4.0)
+        category._startIndex = startIndex
+        category._endIndex = endIndex
+    else
+        category._startIndex = 1
+        category._endIndex = itemsCount
     end
 
-    -- === Footer ===
-    local footerY = panelY + panelH + 10
-    Susano.DrawRectFilled(x - 2, footerY, width + 4, 40,
-        footerBg[1], footerBg[2], footerBg[3], footerBg[4], 0.0)
+    -------------------------------------------------
+    -- SLIDERS
+    -------------------------------------------------
+    local sliderActions = {
+        noclip = {var=function() return noclipSpeed end, min=0.5, max=10},
+        sliderun = {var=function() return sliderunSpeed end, min=1, max=20},
+        aimbot_fov = {var=function() return aimbotFOV end, min=5, max=180}
+    }
 
-    -- Texte footer
-    Susano.DrawText(x + 12, footerY + 12, "Made By Nylox",
-        Style.footerSize, 1, 1, 1, 0.85)
+    -------------------------------------------------
+    -- TOGGLES
+    -------------------------------------------------
+    local toggleStates = {
+        godmode = godmodeEnabled,
+        noclip = noclipEnabled,
+        sliderun = sliderunEnabled,
+        superjump = superjumpEnabled,
+        throwvehicle = throwvehicleEnabled,
+        superstrength = superstrengthEnabled,
+        infinite_stamina = infiniteStaminaEnabled,
+        explosive_melee = explosiveMeleeEnabled,
+        aimbot = aimbotEnabled,
+        carry_vehicle = carryVehicleEnabled,
+        spectate_toggle = spectateEnabled,
 
-    -- Position item
-    local posText = string.format("%d/%d", Menu.selectedIndex, itemsCount)
-    DrawTextRight(x + width - 12, footerY + 12, posText,
-        Style.footerSize, 1, 1, 1, 0.85)
+        esp_box = esp_box,
+        esp_skeleton = esp_skeleton,
+        esp_tracers = esp_tracers,
+        esp_health = esp_health,
+        esp_armor = esp_armor,
+        esp_nametag = esp_nametag,
+        esp_distance = esp_distance,
+        esp_weapon = esp_weapon,
+        esp_ignore_self = esp_ignore_self,
+        esp_friends = esp_friends,
+        esp_peds = esp_peds,
+        esp_invisible = esp_invisible
+    }
+
+    -------------------------------------------------
+    -- ITEMS
+    -------------------------------------------------
+    for i = category._startIndex, category._endIndex do
+        local item = category.items[i]
+        local iy = curY + ((i - category._startIndex) * (itemH + gap))
+        local selected = (i == Menu.selectedIndex)
+
+        local bg = selected and cSel or cItem
+        Susano.DrawRectFilled(x, iy, w, itemH, bg[1],bg[2],bg[3],bg[4],0)
+        Susano.DrawText(x+12, iy+7, item.label, 18, cText[1],cText[2],cText[3],1)
+
+        -------------------------------------------------
+        -- FLECHE DE CATÉGORIE
+        -------------------------------------------------
+        if item.action == "category" then
+            Susano.DrawText(x+w-18, iy+7, ">", 18, 1,1,1,0.7)
+        end
+
+        -------------------------------------------------
+        -- SLIDER
+        -------------------------------------------------
+        local slider = sliderActions[item.action]
+        if slider then
+            local v = slider.var()
+            local percent = (v-slider.min)/(slider.max-slider.min)
+
+            local bw,bh = 100,6
+            local bx = x+w-bw-60
+            local by = iy+(itemH-bh)/2
+
+            Susano.DrawRectFilled(bx,by,bw,bh,0.2,0.2,0.2,0.8,3)
+            Susano.DrawRectFilled(bx,by,bw*percent,bh,0.9,0.9,0.9,0.9,3)
+            Susano.DrawText(x+w-18, iy+7, string.format("%.0f",v), 14,1,1,1,0.8)
+        end
+
+        -------------------------------------------------
+        -- TOGGLE NORMAL
+        -------------------------------------------------
+        if toggleStates[item.action] ~= nil then
+            local isOn = toggleStates[item.action]
+            local tw,th = 36,14
+            local tx = x+w-tw-12
+            local ty = iy+(itemH-th)/2
+
+            Susano.DrawRectFilled(tx,ty,tw,th, isOn and 0.9 or 0.2, isOn and 0.9 or 0.2, isOn and 0.9 or 0.2,0.9,7)
+            local k = 10
+            local kx = isOn and (tx+tw-k-2) or (tx+2)
+            Susano.DrawRectFilled(kx,ty+2,k,k,1,1,1,1,5)
+        end
+
+        -------------------------------------------------
+        -- TOGGLE POUR PLAYER LIST
+        -------------------------------------------------
+        if Menu.currentCategory == "player_list" then
+            local sid = tonumber(item.label:match("^(%d+)"))
+            if sid then
+                local isSel = selectedPlayers[sid]
+                local tw,th = 36,14
+                local tx = x+w-tw-12
+                local ty = iy+(itemH-th)/2
+
+                Susano.DrawRectFilled(tx,ty,tw,th, isSel and 0.9 or 0.2, isSel and 0.9 or 0.2, isSel and 0.9 or 0.2,0.9,7)
+                local k = 10
+                local kx = isSel and (tx+tw-k-2) or (tx+2)
+                Susano.DrawRectFilled(kx,ty+2,k,k,1,1,1,1,5)
+            end
+        end
+    end
 
     Susano.SubmitFrame()
 end
@@ -703,10 +688,12 @@ Citizen.CreateThread(function()
     local lastBackPress = false
     local lastLeftPress = false
     local lastRightPress = false
-    
+
+    local enterPressed = false -- ✅ pour que ça existe après le if
+
     while true do
         Citizen.Wait(0)
-        
+
         local _, f5Pressed = Susano.GetAsyncKeyState(VK_F5)
         if f5Pressed and not lastF5Press then
             Menu.isOpen = not Menu.isOpen
@@ -720,10 +707,10 @@ Citizen.CreateThread(function()
             end
         end
         lastF5Press = f5Pressed
-        
+
         if Menu.isOpen then
             local category = categories[Menu.currentCategory]
-            
+
             local _, upPressed = Susano.GetAsyncKeyState(VK_UP)
             if upPressed and not lastUpPress then
                 Menu.selectedIndex = Menu.selectedIndex - 1
@@ -732,7 +719,7 @@ Citizen.CreateThread(function()
                 end
             end
             lastUpPress = upPressed
-            
+
             local _, downPressed = Susano.GetAsyncKeyState(VK_DOWN)
             if downPressed and not lastDownPress then
                 Menu.selectedIndex = Menu.selectedIndex + 1
@@ -741,10 +728,10 @@ Citizen.CreateThread(function()
                 end
             end
             lastDownPress = downPressed
-            
+
             local _, leftPressed = Susano.GetAsyncKeyState(VK_LEFT)
             local _, rightPressed = Susano.GetAsyncKeyState(VK_RIGHT)
-            
+
             if (leftPressed and not lastLeftPress) or (rightPressed and not lastRightPress) then
                 local item = category.items[Menu.selectedIndex]
                 if item then
@@ -760,26 +747,26 @@ Citizen.CreateThread(function()
                         else
                             sliderunSpeed = math.min(20.0, sliderunSpeed + 1.0)
                         end
-                        elseif item.action == "aimbot_fov" then
-                             if leftPressed then
-                                   aimbotFOV = math.max(1, aimbotFOV - 1)
-                            else
-                                   aimbotFOV = math.min(180, aimbotFOV + 1)
-                          end
+                    elseif item.action == "aimbot_fov" then
+                        if leftPressed then
+                            aimbotFOV = math.max(1, aimbotFOV - 1)
+                        else
+                            aimbotFOV = math.min(180, aimbotFOV + 1)
+                        end
                     end
                 end
             end
             lastLeftPress = leftPressed
             lastRightPress = rightPressed
-            
+
             local _, backPressed = Susano.GetAsyncKeyState(VK_BACK)
             if backPressed and not lastBackPress then
                 if Menu.currentCategory ~= "main" then
                     Menu.categoryIndexes[Menu.currentCategory] = Menu.selectedIndex
-                    
+
                     Menu.transitionDirection = -1
                     Menu.transitionOffset = 50
-                    
+
                     if #Menu.categoryHistory > 0 then
                         Menu.currentCategory = table.remove(Menu.categoryHistory)
                         Menu.selectedIndex = Menu.categoryIndexes[Menu.currentCategory] or 1
@@ -794,31 +781,60 @@ Citizen.CreateThread(function()
                 end
             end
             lastBackPress = backPressed
-            
-            local _, enterPressed = Susano.GetAsyncKeyState(VK_RETURN)
+
+            -- ✅ ENTER (enterPressed reste accessible après)
+            local _, ep = Susano.GetAsyncKeyState(VK_RETURN)
+            enterPressed = ep
+
             if enterPressed and not lastEnterPress then
-                  local item = category.items[Menu.selectedIndex]
+                local item = category.items[Menu.selectedIndex]
 
-                  -- empêcher ENTER d'agir sur les sliders
-                  if item and item.action ~= "aimbot_fov" then
-                      local action = actions[item.action]
-                      if action then
-                          if item.target then
-                              action(item.target)
-                         else
-                              action()
-                      end
-              end
-       end
-end
-lastEnterPress = enterPressed
+                -- Gestion spéciale pour la player-list
+                if Menu.currentCategory == "player_list" then
+                    if item then
+                        local sid = tonumber(item.label:match("^(%d+)"))
+                        if sid then
+                            selectedPlayers[sid] = not selectedPlayers[sid]
+                            lastSelectedPlayer = sid
+                        end
+                    end
+                    goto skip_action
+                end
 
-            
+                -- empêcher ENTER d'agir sur les sliders
+                if item and item.action ~= "aimbot_fov" then
+                    local action = actions[item.action]
+                    if action then
+                        if item.target then
+                            action(item.target)
+                        else
+                            action()
+                        end
+                    end
+                end
+            end
+
+            -- ✅ comme avant: draw dans Menu.isOpen
             DrawMenu()
+        else
+            -- si menu fermé, on réinitialise pour éviter un “sticky press”
+            enterPressed = false
         end
 
+        ::skip_action::
+        lastEnterPress = enterPressed
+    end
+end)
 
-if noclipEnabled then
+
+
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        -- NOCLIP
+        if noclipEnabled then
             local ped = PlayerPedId()
             local entity = ped
             local inVehicle = IsPedInAnyVehicle(ped, false)
@@ -838,8 +854,17 @@ if noclipEnabled then
             local camRot = GetGameplayCamRot(2)
             local pitch = math.rad(camRot.x)
             local yaw = math.rad(camRot.z)
-            local forward = { x = -math.sin(yaw) * math.cos(pitch), y =  math.cos(yaw) * math.cos(pitch), z = math.sin(pitch) }
-            local right   = { x =  math.cos(yaw),                       y =  math.sin(yaw),                       z = 0.0 }
+
+            local forward = {
+                x = -math.sin(yaw) * math.cos(pitch),
+                y =  math.cos(yaw) * math.cos(pitch),
+                z =  math.sin(pitch)
+            }
+            local right = {
+                x =  math.cos(yaw),
+                y =  math.sin(yaw),
+                z =  0.0
+            }
 
             local speed = noclipSpeed
             if IsControlPressed(0, 21) then speed = speed * 3.0 end
@@ -879,6 +904,7 @@ if noclipEnabled then
             FreezeEntityPosition(ped, false)
         end
 
+        -- GODMODE
         if godmodeEnabled then
             local ped = PlayerPedId()
             SetEntityInvincible(ped, true)
@@ -891,6 +917,7 @@ if noclipEnabled then
             SetPedCanBeKnockedOffVehicle(ped, 1)
         end
 
+        -- STAMINA
         if infiniteStaminaEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) and not IsPedInAnyVehicle(ped, false) then
@@ -898,6 +925,7 @@ if noclipEnabled then
             end
         end
 
+        -- SUPERJUMP
         if superjumpEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) then
@@ -905,25 +933,18 @@ if noclipEnabled then
             end
         end
 
+        -- EXPLOSIVE MELEE
         if explosiveMeleeEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) and (IsPedArmed(ped, 1) or GetSelectedPedWeapon(ped) == `WEAPON_UNARMED`) then
-                -- clic d'attaque (clic gauche / gâchette)
                 if IsControlJustPressed(0, 24) then
                     local coords = GetOffsetFromEntityInWorldCoords(ped, 0.0, 1.2, 0.0)
-
-                    AddExplosion(
-                        coords.x, coords.y, coords.z,
-                        1,      -- type explosion
-                        1.0,    -- dégâts
-                        true,   -- son
-                        false,  -- invisible
-                        1.0     -- camera shake
-                    )
+                    AddExplosion(coords.x, coords.y, coords.z, 1, 1.0, true, false, 1.0)
                 end
             end
         end
 
+        -- SLIDERUN
         if sliderunEnabled then
             local ped = PlayerPedId()
             if IsPedOnFoot(ped) and not IsPedInAnyVehicle(ped, false) then
@@ -932,13 +953,14 @@ if noclipEnabled then
                     local heading = GetEntityHeading(ped)
                     local radians = math.rad(heading)
                     local forwardX = -math.sin(radians) * sliderunSpeed
-                    local forwardY = math.cos(radians) * sliderunSpeed
+                    local forwardY =  math.cos(radians) * sliderunSpeed
                     SetEntityVelocity(ped, forwardX, forwardY, velocity.z)
                 end
             end
         end
     end
 end)
+
 
        
 local function W2S(x, y, z)
@@ -1283,6 +1305,119 @@ Citizen.CreateThread(function()
         ::continue::
     end
 end)
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        if carryVehicleEnabled then
+            local ped = PlayerPedId()
+            local pCoords = GetEntityCoords(ped)
+
+            -- Affichage au-dessus de la tête
+            SetTextFont(0)
+            SetTextScale(0.35, 0.35)
+            SetTextColour(255, 255, 255, 255)
+            SetTextCentre(true)
+            BeginTextCommandDisplayText("STRING")
+            AddTextComponentSubstringPlayerName("~y~Y~s~ pour porter\n~o~O~s~ pour jeter")
+            EndTextCommandDisplayText(0.5, 0.45)
+
+            -- Touche Y → porter
+            if IsControlJustPressed(0, 246) then -- Y
+                if not carriedVehicle then
+                    local forward = GetEntityForwardVector(ped)
+                    local checkPos = pCoords + forward * 4.0
+
+                    local veh = GetClosestVehicle(checkPos.x, checkPos.y, checkPos.z, 5.0, 0, 70)
+                    if veh and veh ~= 0 then
+                        carriedVehicle = veh
+
+                        AttachEntityToEntity(
+                            carriedVehicle,
+                            ped,
+                            GetPedBoneIndex(ped, 0x60F1),
+                            0.0, 2.5, 0.0,
+                            0.0, 0.0, 0.0,
+                            false, false, true, false, 2, true
+                        )
+
+                        SetEntityCollision(carriedVehicle, false, false)
+                    end
+                end
+            end
+
+            -- Touche O → jeter
+            if IsControlJustPressed(0, 79) then -- O
+                if carriedVehicle then
+                    local ped = PlayerPedId()
+                    local forward = GetEntityForwardVector(ped)
+
+                    DetachEntity(carriedVehicle, true, true)
+                    SetEntityCollision(carriedVehicle, true, true)
+
+                    -- FORCE DE LANCER
+                    ApplyForceToEntity(
+                        carriedVehicle,
+                        1,                                  -- force type
+                        forward.x * 80.0,                   -- force X
+                        forward.y * 80.0,                   -- force Y
+                        15.0,                               -- force Z
+                        0.0, 0.0, 0.0,                      -- rotation force
+                        0, false, true, true, false, true
+                    )
+
+                    carriedVehicle = nil
+                end
+            end
+        end
+    end
+end)
+
+-- Helper : convertir un Server ID -> Player (index FiveM)
+local function ServerIdToPlayer(serverId)
+    if not serverId then return nil end
+
+    for _, p in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(p) == serverId then
+            return p
+        end
+    end
+
+    return nil
+end
+
+-- Override / fix spectate (remplace l'ancien Susano.Spectate / StopSpectate)
+actions.spectate_toggle = function()
+    spectateEnabled = not spectateEnabled
+
+    if spectateEnabled then
+        if lastSelectedPlayer then
+            local targetPlayer = ServerIdToPlayer(lastSelectedPlayer)
+            if targetPlayer then
+                local targetPed = GetPlayerPed(targetPlayer)
+                if targetPed and targetPed ~= 0 and DoesEntityExist(targetPed) then
+                    NetworkSetInSpectatorMode(true, targetPed)
+                    print("^2✓ Spectate enabled on player " .. lastSelectedPlayer .. "^0")
+                else
+                    print("^1✗ Ped introuvable^0")
+                    spectateEnabled = false
+                end
+            else
+                print("^1✗ Joueur introuvable (server id)^0")
+                spectateEnabled = false
+            end
+        else
+            print("^1✗ Aucun joueur sélectionné^0")
+            spectateEnabled = false
+        end
+    else
+        -- Désactive spectate (le 2e param peut être n'importe quel ped valide)
+        NetworkSetInSpectatorMode(false, PlayerPedId())
+        print("^1✗ Spectate disabled^0")
+    end
+end
+
 
 
 
