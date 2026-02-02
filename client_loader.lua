@@ -40,7 +40,9 @@ local categories = {
         items = {
             {label = "Godmode", action = "godmode"},
             {label = "Revive Player", action = "revive"},
-            {label = "Heal Player", action = "heal"}
+            {label = "Heal Player", action = "heal"},
+            {label = "Give Armor", action = "give_armor"},
+
         }
     },
 
@@ -50,8 +52,8 @@ local categories = {
             {label = "Noclip", action = "noclip"},
             {label = "Slide Run", action = "sliderun"},
             {label = "Super Jump", action = "superjump"},
-            {label = "Infinite Stamina", action = "infinite_stamina"}
-
+            {label = "Infinite Stamina", action = "infinite_stamina"},
+            {label = "Player Invisible", action = "player_invisible"},
         }
     },
     
@@ -68,7 +70,9 @@ local categories = {
             {label = "Throw From Vehicle", action = "throwvehicle"},
             {label = "Super Strength", action = "superstrength"},
             {label = "Explosive Melee", action = "explosive_melee"},
-            {label = "Carry Vehicle", action = "carry_vehicle"},           
+            {label = "Carry Vehicle", action = "carry_vehicle"},      
+            {label = "TP to Waypoint", action = "tp_to_waypoint"}, 
+            {label = "Freecam", action = "freecam"},    
         }
     },
 
@@ -175,6 +179,25 @@ aimbot_fov = false
 local carryVehicleEnabled = false
 local carriedVehicle = nil
 spectateEnabled = false
+local playerInvisibleEnabled = false
+local freecamEnabled = false
+local freecamCam = nil
+local freecamSpeed = 1.0
+local freecamFeature = 1
+local freecamHeldVehicle = nil
+local freecamHoldDistance = 5.0
+
+local freecamFeatures = {
+    "Nothing",
+    "Car Spawn",
+    "Teleport",
+    "Shoot Rockets",
+    "Car Spam",
+    "Car Delete",
+    "Physics Gun"
+}
+
+
 
 local Banner = {
     enabled = true,
@@ -406,6 +429,72 @@ local actions = {
 
             print("^2✓ Random outfit applied^0")
     end,
+    
+    tp_to_waypoint = function()
+    local waypoint = GetFirstBlipInfoId(8) -- 8 = BLIP_WAYPOINT
+
+    if DoesBlipExist(waypoint) then
+        local coords = GetBlipInfoIdCoord(waypoint)
+        local ped = PlayerPedId()
+
+        -- On téléporte un peu au-dessus pour éviter de tomber sous la map
+        SetEntityCoords(ped, coords.x, coords.y, coords.z + 1.0, false, false, false, false)
+
+        print("^2✓ Téléporté au waypoint^0")
+    else
+        print("^1✗ Aucun waypoint trouvé^0")
+    end
+end,
+
+give_armor = function()
+    local ped = PlayerPedId()
+    SetPedArmour(ped, 100)
+    print("^2✓ Armor given^0")
+end,
+
+player_invisible = function()
+    playerInvisibleEnabled = not playerInvisibleEnabled
+
+    local ped = PlayerPedId()
+    SetEntityVisible(ped, not playerInvisibleEnabled, false)
+
+    print(playerInvisibleEnabled and "^2✓ Player invisible enabled^0" or "^1✗ Player invisible disabled^0")
+end,
+
+freecam = function()
+    freecamEnabled = not freecamEnabled
+
+    if freecamEnabled then
+        local ped = PlayerPedId()
+        local pos = GetEntityCoords(ped)
+        local rot = GetGameplayCamRot(2)
+
+        freecamCam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
+        SetCamCoord(freecamCam, pos)
+        SetCamRot(freecamCam, rot, 2)
+        SetCamActive(freecamCam, true)
+        RenderScriptCams(true, false, 0, true, true)
+
+        print("^2✓ Freecam enabled^0")
+    else
+        RenderScriptCams(false, false, 0, true, true)
+        DestroyCam(freecamCam, false)
+        freecamCam = nil
+
+        if freecamHeldVehicle then
+            SetEntityCollision(freecamHeldVehicle, true, true)
+            SetEntityAlpha(freecamHeldVehicle, 255, false)
+            freecamHeldVehicle = nil
+        end
+
+        print("^1✗ Freecam disabled^0")
+    end
+end,
+
+
+
+
+
 
 
 
@@ -636,6 +725,10 @@ function DrawMenu()
         aimbot = aimbotEnabled,
         carry_vehicle = carryVehicleEnabled,
         spectate_toggle = spectateEnabled,
+        player_invisible = playerInvisibleEnabled,
+        freecam = freecamEnabled,
+
+
 
         esp_box = esp_box,
         esp_skeleton = esp_skeleton,
@@ -1495,8 +1588,145 @@ Citizen.CreateThread(function()
     end
 end)
 
+function UpdateFreecam()
+    if not freecamCam then return end
+
+    DisableAllControlActions(0)
+
+    local pos = GetCamCoord(freecamCam)
+    local rot = GetCamRot(freecamCam, 2)
+    local moveSpeed = freecamSpeed
+
+    if IsControlPressed(0, 21) then moveSpeed = moveSpeed * 3 end
+
+    local heading = math.rad(rot.z)
+    local pitch = math.rad(rot.x)
+
+    local dir = vector3(
+        -math.sin(heading) * math.cos(pitch),
+         math.cos(heading) * math.cos(pitch),
+         math.sin(pitch)
+    )
+
+    local move = vector3(0,0,0)
+
+    if IsControlPressed(0, 32) then move = move + dir * moveSpeed end
+    if IsControlPressed(0, 33) then move = move - dir * moveSpeed end
+    if IsControlPressed(0, 34) then move = move + vector3(-dir.y, dir.x, 0) * moveSpeed end
+    if IsControlPressed(0, 35) then move = move + vector3(dir.y, -dir.x, 0) * moveSpeed end
+    if IsControlPressed(0, 38) then move = move + vector3(0,0,moveSpeed) end
+    if IsControlPressed(0, 44) then move = move - vector3(0,0,moveSpeed) end
+
+    SetCamCoord(freecamCam, pos + move)
+
+    local dx = GetControlNormal(0, 1) * -5.0
+    local dy = GetControlNormal(0, 2) * -5.0
+
+    local newX = math.max(-89.0, math.min(89.0, rot.x + dy))
+    local newZ = rot.z + dx
+
+    SetCamRot(freecamCam, vector3(newX, rot.y, newZ), 2)
+
+    FreecamDrawCrosshair()
+
+    -----------------------------------------
+    -- FEATURES
+    -----------------------------------------
+
+    local camPos = GetCamCoord(freecamCam)
+    local camRot = GetCamRot(freecamCam, 2)
+    local pitch2 = math.rad(camRot.x)
+    local heading2 = math.rad(camRot.z)
+    local camDir = vector3(
+        -math.sin(heading2) * math.cos(pitch2),
+         math.cos(heading2) * math.cos(pitch2),
+         math.sin(pitch2)
+    )
+
+    -- Car Delete
+    if freecamFeatures[freecamFeature] == "Car Delete" then
+        local veh, hit = FreecamGetVehicle(100.0)
+        if veh then
+            DrawLine(pos.x, pos.y, pos.z, hit.x, hit.y, hit.z, 255,0,0,255)
+            if IsControlJustPressed(0, 24) then DeleteEntity(veh) end
+        end
+    end
+
+    -- Physics Gun
+    if freecamFeatures[freecamFeature] == "Physics Gun" then
+        if freecamHeldVehicle then
+            local holdPos = camPos + camDir * freecamHoldDistance
+            SetEntityCoordsNoOffset(freecamHeldVehicle, holdPos.x, holdPos.y, holdPos.z, true, true, true)
+            SetEntityVelocity(freecamHeldVehicle, 0,0,0)
+            SetEntityCollision(freecamHeldVehicle, false, false)
+            SetEntityAlpha(freecamHeldVehicle, 200, false)
+
+            if IsControlJustPressed(0, 25) then
+                SetEntityCollision(freecamHeldVehicle, true, true)
+                SetEntityAlpha(freecamHeldVehicle, 255, false)
+                ApplyForceToEntity(freecamHeldVehicle, 1, camDir.x*100, camDir.y*100, camDir.z*100, 0,0,0, 0, false,true,true,false,true)
+                freecamHeldVehicle = nil
+            end
+
+            if IsControlJustPressed(0, 24) then
+                SetEntityCollision(freecamHeldVehicle, true, true)
+                SetEntityAlpha(freecamHeldVehicle, 255, false)
+                freecamHeldVehicle = nil
+            end
+        else
+            local veh, hit = FreecamGetVehicle(10.0)
+            if veh and IsControlJustPressed(0, 24) then
+                freecamHeldVehicle = veh
+                SetEntityCollision(veh, false, false)
+                SetEntityAlpha(veh, 200, false)
+            end
+        end
+    end
+
+    -- Car Spawn
+    if freecamFeatures[freecamFeature] == "Car Spawn" and IsControlJustPressed(0, 24) then
+        SpawnCarAtPos(camPos + camDir * 5.0)
+    end
+
+    -- Teleport
+    if freecamFeatures[freecamFeature] == "Teleport" and IsControlJustPressed(0, 24) then
+        TeleportPlayerToPos(camPos + camDir * 5.0)
+    end
+
+    -- Shoot Rockets
+    if freecamFeatures[freecamFeature] == "Shoot Rockets" and IsControlJustPressed(0, 24) then
+        ShootRocketFromCam()
+    end
+
+    -- Car Spam
+    if freecamFeatures[freecamFeature] == "Car Spam" and IsControlJustPressed(0, 24) then
+        SpamCarsAtPos(camPos + camDir * 5.0)
+    end
+
+    -- Scroll features
+    local scroll = GetControlNormal(0, 14)
+    if scroll > 0.5 then
+        freecamFeature = freecamFeature % #freecamFeatures + 1
+        Citizen.Wait(200)
+    elseif scroll < -0.5 then
+        freecamFeature = freecamFeature - 1
+        if freecamFeature < 1 then freecamFeature = #freecamFeatures end
+        Citizen.Wait(200)
+    end
+
+    DrawText2D(0.5, 0.95, "Feature: "..freecamFeatures[freecamFeature], 0.5, 255,255,255,255, 4, true)
+end
 
 
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        if freecamEnabled then
+            UpdateFreecam()
+        end
+    end
+end)
 
 
 
