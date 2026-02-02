@@ -214,6 +214,13 @@ local bannerTexture = nil
 local bannerWidth = 0
 local bannerHeight = 0
 
+Citizen.CreateThread(function()
+    if Banner.imagePath then
+        bannerTexture = Susano.LoadTexture(Banner.imagePath)
+    end
+end)
+
+
 local Style = {
     -- POSITION & DIMENSIONS
     x = 60,
